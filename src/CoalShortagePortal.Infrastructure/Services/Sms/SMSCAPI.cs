@@ -1,289 +1,242 @@
 ﻿using System;
-using System.IO;
-using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace CoalShortagePortal.Infrastructure.Services.Sms
 {
     public class SMSCAPI
     {
-        private WebProxy objProxy1 = null;
+        private readonly HttpClient _httpClient;
+        private readonly string _apiUrl = "http://www.smscountry.com/SMSCwebservice_bulk.aspx";
 
-        public string SendSMS(string User, string password, string Mobile_Number, string Message)
+        // Constructor for dependency injection (recommended)
+        public SMSCAPI(HttpClient httpClient)
         {
-            string stringpost = null;
-            stringpost = "User=" + User + "&passwd=" + password + "&mobilenumber=" + Mobile_Number + "&message=" + Message;
+            _httpClient = httpClient;
+        }
 
-            HttpWebRequest objWebRequest = null;
-            HttpWebResponse objWebResponse = null;
-            StreamWriter objStreamWriter = null;
-            StreamReader objStreamReader = null;
+        // Default constructor for backward compatibility
+        public SMSCAPI()
+        {
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(30)
+            };
+        }
 
+        // Original synchronous methods - keep same signatures for backward compatibility
+        public string SendSMS(string user, string password, string mobileNumber, string message)
+        {
             try
             {
-
-                string stringResult = null;
-
-                objWebRequest = (HttpWebRequest)WebRequest.Create("http://www.smscountry.com/SMSCwebservice_bulk.aspx");
-                objWebRequest.Method = "POST";
-
-                if ((objProxy1 != null))
+                var parameters = new Dictionary<string, string>
                 {
-                    objWebRequest.Proxy = objProxy1;
-                }
+                    { "User", user },
+                    { "passwd", password },
+                    { "mobilenumber", mobileNumber },
+                    { "message", message }
+                };
 
+                var content = new FormUrlEncodedContent(parameters);
+                var response = _httpClient.PostAsync(_apiUrl, content).GetAwaiter().GetResult();
 
-                // Use below code if you want to SETUP PROXY.
-                //Parameters to pass: 1. ProxyAddress 2. Port
-                //You can find both the parameters in Connection settings of your internet explorer.
+                response.EnsureSuccessStatusCode();
 
-                //WebProxy myProxy = new WebProxy("YOUR PROXY", PROXPORT);
-                //myProxy.BypassProxyOnLocal = true;
-                //wrGETURL.Proxy = myProxy;
-
-                objWebRequest.ContentType = "application/x-www-form-urlencoded";
-
-                objStreamWriter = new StreamWriter(objWebRequest.GetRequestStream());
-                objStreamWriter.Write(stringpost);
-                objStreamWriter.Flush();
-                objStreamWriter.Close();
-
-                objWebResponse = (HttpWebResponse)objWebRequest.GetResponse();
-                objStreamReader = new StreamReader(objWebResponse.GetResponseStream());
-                stringResult = objStreamReader.ReadToEnd();
-
-                objStreamReader.Close();
-                return stringResult;
+                return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
                 return ex.Message;
             }
-            finally
-            {
-
-                if ((objStreamWriter != null))
-                {
-                    objStreamWriter.Close();
-                }
-                if ((objStreamReader != null))
-                {
-                    objStreamReader.Close();
-                }
-                objWebRequest = null;
-                objWebResponse = null;
-                objProxy1 = null;
-            }
-
         }
 
-        private void StreamReader(Stream stream)
+        public string SendSMS(string user, string password, string mobileNumber, string message, string mType)
         {
-            throw new NotImplementedException();
-        }
-
-        public string SendSMS(string User, string password, string Mobile_Number, string Message, string Mtype)
-        {
-
-            System.Object stringpost = "User=" + User + "&passwd=" + password + "&mobilenumber=" + Mobile_Number + "&message=" + Message + "&MType=" + Mtype;
-
-            //string functionReturnValue = null;
-            //functionReturnValue = "";
-
-            HttpWebRequest objWebRequest = null;
-            HttpWebResponse objWebResponse = null;
-            StreamWriter objStreamWriter = null;
-            StreamReader objStreamReader = null;
-
             try
             {
-                string stringResult = null;
-
-                objWebRequest = (HttpWebRequest)WebRequest.Create("http://www.smscountry.com/SMSCwebservice_bulk.aspx?");
-                objWebRequest.Method = "POST";
-
-                if ((objProxy1 != null))
+                var parameters = new Dictionary<string, string>
                 {
-                    objWebRequest.Proxy = objProxy1;
-                }
+                    { "User", user },
+                    { "passwd", password },
+                    { "mobilenumber", mobileNumber },
+                    { "message", message },
+                    { "MType", mType }
+                };
 
-                // Use below code if you want to SETUP PROXY.
-                //Parameters to pass: 1. ProxyAddress 2. Port
-                //You can find both the parameters in Connection settings of your internet explorer.
+                var content = new FormUrlEncodedContent(parameters);
+                var response = _httpClient.PostAsync(_apiUrl, content).GetAwaiter().GetResult();
 
-                //WebProxy myProxy = new WebProxy("YOUR PROXY", PROXPORT);
-                //myProxy.BypassProxyOnLocal = true;
-                //wrGETURL.Proxy = myProxy;
+                response.EnsureSuccessStatusCode();
 
-                objWebRequest.ContentType = "application/x-www-form-urlencoded";
-
-                objStreamWriter = new StreamWriter(objWebRequest.GetRequestStream());
-                objStreamWriter.Write(stringpost);
-                objStreamWriter.Flush();
-                objStreamWriter.Close();
-
-                objWebResponse = (HttpWebResponse)objWebRequest.GetResponse();
-                objStreamReader = new StreamReader(objWebResponse.GetResponseStream());
-                stringResult = objStreamReader.ReadToEnd();
-
-                objStreamReader.Close();
-                return (stringResult);
+                return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
-                return (ex.Message);
-            }
-            finally
-            {
-
-                if ((objStreamWriter != null))
-                {
-                    objStreamWriter.Close();
-                }
-                if ((objStreamReader != null))
-                {
-                    objStreamReader.Close();
-                }
-                objWebRequest = null;
-                objWebResponse = null;
-                objProxy1 = null;
+                return ex.Message;
             }
         }
 
-        public string SendSMS(string User, string password, string Mobile_Number, string Message, string Mtype, string DR)
+        public string SendSMS(string user, string password, string mobileNumber, string message, string mType, string dr)
         {
-
-            System.Object stringpost = "User=" + User + "&passwd=" + password + "&mobilenumber=" + Mobile_Number + "&message=" + Message + "&MType=" + Mtype + "&DR=" + DR;
-
-            //string functionReturnValue = null;
-            //functionReturnValue = "";
-
-            HttpWebRequest objWebRequest = null;
-            HttpWebResponse objWebResponse = null;
-            StreamWriter objStreamWriter = null;
-            StreamReader objStreamReader = null;
-
             try
             {
-                string stringResult = null;
-
-                objWebRequest = (HttpWebRequest)WebRequest.Create("http://www.smscountry.com/SMSCwebservice_bulk.aspx?");
-                objWebRequest.Method = "POST";
-
-                if ((objProxy1 != null))
+                var parameters = new Dictionary<string, string>
                 {
-                    objWebRequest.Proxy = objProxy1;
-                }
+                    { "User", user },
+                    { "passwd", password },
+                    { "mobilenumber", mobileNumber },
+                    { "message", message },
+                    { "MType", mType },
+                    { "DR", dr }
+                };
 
-                // Use below code if you want to SETUP PROXY.
-                //Parameters to pass: 1. ProxyAddress 2. Port
-                //You can find both the parameters in Connection settings of your internet explorer.
+                var content = new FormUrlEncodedContent(parameters);
+                var response = _httpClient.PostAsync(_apiUrl, content).GetAwaiter().GetResult();
 
-                //WebProxy myProxy = new WebProxy("YOUR PROXY", PROXPORT);
-                //myProxy.BypassProxyOnLocal = true;
-                //wrGETURL.Proxy = myProxy;
+                response.EnsureSuccessStatusCode();
 
-                objWebRequest.ContentType = "application/x-www-form-urlencoded";
-
-                objStreamWriter = new StreamWriter(objWebRequest.GetRequestStream());
-                objStreamWriter.Write(stringpost);
-                objStreamWriter.Flush();
-                objStreamWriter.Close();
-
-                objWebResponse = (HttpWebResponse)objWebRequest.GetResponse();
-                objStreamReader = new StreamReader(objWebResponse.GetResponseStream());
-                stringResult = objStreamReader.ReadToEnd();
-
-                objStreamReader.Close();
-                return (stringResult);
+                return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
-                return (ex.Message);
-            }
-            finally
-            {
-
-                if ((objStreamWriter != null))
-                {
-                    objStreamWriter.Close();
-                }
-                if ((objStreamReader != null))
-                {
-                    objStreamReader.Close();
-                }
-                objWebRequest = null;
-                objWebResponse = null;
-                objProxy1 = null;
+                return ex.Message;
             }
         }
 
-        public string SendSMS(string User, string password, string Mobile_Number, string Message, string Mtype, string DR, string SID)
+        public string SendSMS(string user, string password, string mobileNumber, string message, string mType, string dr, string sid)
         {
-
-            System.Object stringpost = "User=" + User + "&passwd=" + password + "&mobilenumber=" + Mobile_Number + "&message=" + Message + "&MType=" + Mtype + "&DR=" + DR + "&SID=" + SID;
-
-            //string functionReturnValue = null;
-            //functionReturnValue = "";
-
-            HttpWebRequest objWebRequest = null;
-            HttpWebResponse objWebResponse = null;
-            StreamWriter objStreamWriter = null;
-            StreamReader objStreamReader = null;
-
             try
             {
-                string stringResult = null;
-
-                objWebRequest = (HttpWebRequest)WebRequest.Create("http://www.smscountry.com/SMSCwebservice_bulk.aspx?");
-                objWebRequest.Method = "POST";
-
-                if ((objProxy1 != null))
+                var parameters = new Dictionary<string, string>
                 {
-                    objWebRequest.Proxy = objProxy1;
-                }
+                    { "User", user },
+                    { "passwd", password },
+                    { "mobilenumber", mobileNumber },
+                    { "message", message },
+                    { "MType", mType },
+                    { "DR", dr },
+                    { "SID", sid }
+                };
 
-                // Use below code if you want to SETUP PROXY.
-                //Parameters to pass: 1. ProxyAddress 2. Port
-                //You can find both the parameters in Connection settings of your internet explorer.
+                var content = new FormUrlEncodedContent(parameters);
+                var response = _httpClient.PostAsync(_apiUrl, content).GetAwaiter().GetResult();
 
-                //WebProxy myProxy = new WebProxy("YOUR PROXY", PROXPORT);
-                //myProxy.BypassProxyOnLocal = true;
-                //wrGETURL.Proxy = myProxy;
+                response.EnsureSuccessStatusCode();
 
-                objWebRequest.ContentType = "application/x-www-form-urlencoded";
-
-                objStreamWriter = new StreamWriter(objWebRequest.GetRequestStream());
-                objStreamWriter.Write(stringpost);
-                objStreamWriter.Flush();
-                objStreamWriter.Close();
-
-                objWebResponse = (HttpWebResponse)objWebRequest.GetResponse();
-                objStreamReader = new StreamReader(objWebResponse.GetResponseStream());
-                stringResult = objStreamReader.ReadToEnd();
-
-                objStreamReader.Close();
-                return (stringResult);
+                return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
-                return (ex.Message);
-            }
-            finally
-            {
-
-                if ((objStreamWriter != null))
-                {
-                    objStreamWriter.Close();
-                }
-                if ((objStreamReader != null))
-                {
-                    objStreamReader.Close();
-                }
-                objWebRequest = null;
-                objWebResponse = null;
-                objProxy1 = null;
+                return ex.Message;
             }
         }
 
+        // Async versions (optional - use these for better performance in async contexts)
+        public async Task<string> SendSMSAsync(string user, string password, string mobileNumber, string message)
+        {
+            try
+            {
+                var parameters = new Dictionary<string, string>
+                {
+                    { "User", user },
+                    { "passwd", password },
+                    { "mobilenumber", mobileNumber },
+                    { "message", message }
+                };
+
+                var content = new FormUrlEncodedContent(parameters);
+                var response = await _httpClient.PostAsync(_apiUrl, content);
+
+                response.EnsureSuccessStatusCode();
+
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+        public async Task<string> SendSMSAsync(string user, string password, string mobileNumber, string message, string mType)
+        {
+            try
+            {
+                var parameters = new Dictionary<string, string>
+                {
+                    { "User", user },
+                    { "passwd", password },
+                    { "mobilenumber", mobileNumber },
+                    { "message", message },
+                    { "MType", mType }
+                };
+
+                var content = new FormUrlEncodedContent(parameters);
+                var response = await _httpClient.PostAsync(_apiUrl, content);
+
+                response.EnsureSuccessStatusCode();
+
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+        public async Task<string> SendSMSAsync(string user, string password, string mobileNumber, string message, string mType, string dr)
+        {
+            try
+            {
+                var parameters = new Dictionary<string, string>
+                {
+                    { "User", user },
+                    { "passwd", password },
+                    { "mobilenumber", mobileNumber },
+                    { "message", message },
+                    { "MType", mType },
+                    { "DR", dr }
+                };
+
+                var content = new FormUrlEncodedContent(parameters);
+                var response = await _httpClient.PostAsync(_apiUrl, content);
+
+                response.EnsureSuccessStatusCode();
+
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+        public async Task<string> SendSMSAsync(string user, string password, string mobileNumber, string message, string mType, string dr, string sid)
+        {
+            try
+            {
+                var parameters = new Dictionary<string, string>
+                {
+                    { "User", user },
+                    { "passwd", password },
+                    { "mobilenumber", mobileNumber },
+                    { "message", message },
+                    { "MType", mType },
+                    { "DR", dr },
+                    { "SID", sid }
+                };
+
+                var content = new FormUrlEncodedContent(parameters);
+                var response = await _httpClient.PostAsync(_apiUrl, content);
+
+                response.EnsureSuccessStatusCode();
+
+                return await response.Content.ReadAsStringAsync();
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
     }
 }

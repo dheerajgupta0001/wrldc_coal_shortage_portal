@@ -27,7 +27,7 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
         private readonly IDNTCaptchaValidatorService _validatorService;
         private readonly DNTCaptchaOptions _captchaOptions;
 
-        public LoginModel(SignInManager<IdentityUser> signInManager, 
+        public LoginModel(SignInManager<IdentityUser> signInManager,
             ILogger<LoginModel> logger,
             UserManager<IdentityUser> userManager,
             IEmailSender emailSender,
@@ -87,7 +87,8 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
         {
             returnUrl = returnUrl ?? Url.Content("~/");
 
-            if (!_validatorService.HasRequestValidCaptchaEntry(Language.English, DisplayMode.SumOfTwoNumbers))
+            // Updated captcha validation - removed Language and DisplayMode parameters
+            if (!_validatorService.HasRequestValidCaptchaEntry())
             {
                 this.ModelState.AddModelError(_captchaOptions.CaptchaComponent.CaptchaInputName, "Please enter the security code as a number.");
             }

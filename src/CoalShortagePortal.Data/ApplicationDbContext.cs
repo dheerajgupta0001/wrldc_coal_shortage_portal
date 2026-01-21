@@ -25,6 +25,7 @@ namespace CoalShortagePortal.Data
         public DbSet<OtherReasonsResponse> OtherReasonsResponses { get; set; }
         public DbSet<CriticalCoalResponse> CriticalCoalResponses { get; set; }
         public DbSet<ExpectedRevivalResponse> ExpectedRevivalResponses { get; set; }
+        public DbSet<DailyMUsData> DailyMUsDatas { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

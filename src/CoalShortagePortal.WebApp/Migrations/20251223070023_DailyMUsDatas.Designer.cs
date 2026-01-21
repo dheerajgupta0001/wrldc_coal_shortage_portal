@@ -3,6 +3,7 @@ using System;
 using CoalShortagePortal.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CoalShortagePortal.WebApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251223070023_DailyMUsDatas")]
+    partial class DailyMUsDatas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -165,17 +168,13 @@ namespace CoalShortagePortal.WebApp.Migrations
                     b.Property<string>("LastModifiedById")
                         .HasColumnType("text");
 
-                    b.Property<string>("StationName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("LastModifiedById");
 
-                    b.HasIndex("DataDate", "StationName")
+                    b.HasIndex("DataDate", "DailyMUs")
                         .IsUnique();
 
                     b.ToTable("DailyMUsDatas");

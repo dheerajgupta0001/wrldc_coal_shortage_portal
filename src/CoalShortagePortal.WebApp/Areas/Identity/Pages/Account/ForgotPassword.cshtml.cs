@@ -23,7 +23,10 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
         private readonly IDNTCaptchaValidatorService _validatorService;
         private readonly DNTCaptchaOptions _captchaOptions;
 
-        public ForgotPasswordModel(UserManager<IdentityUser> userManager, IEmailSender emailSender, IDNTCaptchaValidatorService validatorService,
+        public ForgotPasswordModel(
+            UserManager<IdentityUser> userManager,
+            IEmailSender emailSender,
+            IDNTCaptchaValidatorService validatorService,
             IOptions<DNTCaptchaOptions> options)
         {
             _userManager = userManager;
@@ -44,7 +47,8 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!_validatorService.HasRequestValidCaptchaEntry(Language.English, DisplayMode.SumOfTwoNumbers))
+            // Captcha validation - compatible with DNTCaptcha 4.x+
+            if (!_validatorService.HasRequestValidCaptchaEntry())
             {
                 ModelState.AddModelError(_captchaOptions.CaptchaComponent.CaptchaInputName, "Please enter the security code as a number.");
             }
