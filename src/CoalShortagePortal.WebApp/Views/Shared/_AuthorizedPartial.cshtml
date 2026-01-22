@@ -58,5 +58,11 @@
     <li class="nav-item">
         <a class="nav-link text-dark" asp-page="/GenMUs/Index">Daily MUs</a>
     </li>
+    @if (User.IsInRole(SecurityConstants.AdminRoleString))
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-page="/GenMUs/AllPendingMUs">Pending MUs</a>
+        </li>
+    }
 }
 

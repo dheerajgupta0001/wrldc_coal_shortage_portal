@@ -47,7 +47,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         //public void OnGet()
         public async Task OnGetAsync()
         {
-            DataDate = DateTime.Now.Date;
+            DataDate = DateTime.Now.AddDays(-1).Date;
 
             // If user is admin, show all records, otherwise filter by StationName
             //if (User.Identity.Name?.ToLower() == "admin")
