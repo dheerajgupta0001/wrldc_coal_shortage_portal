@@ -27,7 +27,13 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         [Required]
         [BindProperty]
         [Display(Name = "Daily MUs")]
+        [Range(0.01, float.MaxValue, ErrorMessage = "Daily MUs must be greater than 0")]
         public float DailyMUs { get; set; }
+
+        [BindProperty]
+        [Display(Name = "ExBus")]
+        [Range(0.01, float.MaxValue, ErrorMessage = "ExBus must be greater than 0")]
+        public float ExBus { get; set; }
 
         [Required]
         public string StationName { get; set; }
@@ -48,21 +54,6 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         public async Task OnGetAsync()
         {
             DataDate = DateTime.Now.AddDays(-1).Date;
-
-            // If user is admin, show all records, otherwise filter by StationName
-            //if (User.Identity.Name?.ToLower() == "admin")
-            //{
-            //    DailyMUsDataList = await _context.DailyMUsDatas
-            //        .OrderByDescending(d => d.DataDate)
-            //        .ToListAsync();
-            //}
-            //else
-            //{
-            //    DailyMUsDataList = await _context.DailyMUsDatas
-            //        .Where(co => co.StationName == User.Identity.Name)
-            //        .OrderByDescending(d => d.DataDate)
-            //        .ToListAsync();
-            //}
             var query = _context.DailyMUsDatas.AsQueryable();
 
             // Filter by StationName only if user is not admin
@@ -93,7 +84,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             if (existingRecord != null)
             {
                 ModelState.AddModelError("",
-                    $"A record for date {DataDate.ToString("yyyy-MM-dd")} and station '{User.Identity.Name}' already exists.");
+                    $"A record for date {DataDate.ToString("yyyy-MM-dd")} and Generating Station '{User.Identity.Name}' already exists.");
                 await LoadDataListAsync();
                 return Page();
             }
@@ -104,6 +95,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 //DataDate = DataDate.ToUniversalTime(),
                 DataDate = DateTime.SpecifyKind(DataDate.Date, DateTimeKind.Utc),
                 DailyMUs = DailyMUs,
+                ExBus = ExBus,
                 StationName = User.Identity.Name
                 // Add other properties as needed
             };

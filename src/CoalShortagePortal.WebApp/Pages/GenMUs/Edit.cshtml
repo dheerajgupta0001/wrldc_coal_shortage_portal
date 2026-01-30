@@ -22,7 +22,7 @@
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle"></i> <strong>Success!</strong> @TempData["SuccessMessage"]
+            <i class="fas fa-check-circle"></i> <strong>Success! @TempData["SuccessMessage"] </strong>
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
@@ -33,7 +33,7 @@
     @if (TempData["ErrorMessage"] != null)
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-circle"></i> <strong>Error!</strong> @TempData["ErrorMessage"]
+            <i class="fas fa-exclamation-circle"></i> <strong>Error! @TempData["ErrorMessage"] </strong>
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
@@ -88,16 +88,23 @@
                                 <input type="text" class="form-control form-control-lg" value="@Model.DataDate.ToString("yyyy-MM-dd")" readonly style="background-color: #e9ecef; cursor: not-allowed;" />
                                 <small class="form-text text-muted">This field cannot be modified</small>
                             </div>
-
+                            <div>
+                                <small class="form-text text-success">
+                                    <i class="fas fa-info-circle"></i> You can only modify MU & ExBus value
+                                </small>
+                            </div>
                             <div class="form-group">
                                 <label asp-for="DailyMUs" class="font-weight-bold">
                                     <i class="fas fa-chart-line text-success"></i> Daily MUs (Editable)
                                 </label>
                                 <input asp-for="DailyMUs" class="form-control form-control-lg" type="number" step="0.01" placeholder="Enter MU value" autofocus />
                                 <span asp-validation-for="DailyMUs" class="text-danger small"></span>
-                                <small class="form-text text-success">
-                                    <i class="fas fa-info-circle"></i> You can only modify the MU value
-                                </small>
+
+                                <label asp-for="ExBus" class="font-weight-bold">
+                                    <i class="fas fa-chart-line text-success"></i> ExBus (Editable)
+                                </label>
+                                <input asp-for="ExBus" class="form-control form-control-lg" type="number" step="0.01" placeholder="Enter ExBus value" autofocus />
+                                <span asp-validation-for="ExBus" class="text-danger small"></span>
                             </div>
 
                             <div class="btn-group-vertical w-100">
@@ -143,6 +150,7 @@
                                     <th><i class="fas fa-calendar"></i> DATE</th>
                                     <th><i class="fas fa-building"></i> STATION</th>
                                     <th class="text-right"><i class="fas fa-bolt"></i> MUS</th>
+                                    <th class="text-right"><i class="fas fa-bolt"></i> ExBus</th>
                                     <th class="text-center"><i class="fas fa-cog"></i> ACTION</th>
                                 </tr>
                             </thead>
@@ -163,6 +171,11 @@
                                             <td class="align-middle text-right">
                                                 <span class="badge badge-success text-white px-3 py-2" style="font-size: 0.9rem; font-weight: 600;">
                                                     @item.DailyMUs.ToString("N2")
+                                                </span>
+                                            </td>
+                                            <td class="align-middle text-right">
+                                                <span class="badge badge-success text-white px-3 py-2" style="font-size: 0.9rem; font-weight: 600;">
+                                                    @item.ExBus.ToString("N2")
                                                 </span>
                                             </td>
                                             <td class="align-middle text-center">

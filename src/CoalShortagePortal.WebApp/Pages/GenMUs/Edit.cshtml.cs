@@ -31,7 +31,13 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         [Required]
         [BindProperty]
         [Display(Name = "Daily MUs")]
+        [Range(0.01, float.MaxValue, ErrorMessage = "Daily MUs must be greater than 0")]
         public float DailyMUs { get; set; }
+
+        [BindProperty]
+        [Range(0.01, float.MaxValue, ErrorMessage = "ExBus must be greater than 0")]
+        [Display(Name = "ExBus")]
+        public float ExBus { get; set; }
 
         [BindProperty]
         public string StationName { get; set; }
@@ -64,6 +70,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 SelectedId = record.Id;
                 DataDate = record.DataDate;
                 DailyMUs = record.DailyMUs;
+                ExBus = record.ExBus;
                 StationName = record.StationName;
                 SelectedRecord = record;
             }
@@ -92,10 +99,10 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 return Page();
             }
 
-            // Only validate DailyMUs
-            if (DailyMUs <= 0)
+            // Only validate DailyMUs & EX Bus
+            if (DailyMUs <= 0 || ExBus <=0)
             {
-                ModelState.AddModelError("DailyMUs", "Daily MUs must be greater than 0.");
+                ModelState.AddModelError("ExBus", "Both Daily MUs & ExBus must be greater than 0.");
                 var record = await _context.DailyMUsDatas.FindAsync(SelectedId.Value);
                 if (record != null)
                 {
@@ -121,11 +128,12 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             {
                 // Only update DailyMUs - keep Date and Station unchanged
                 recordToUpdate.DailyMUs = DailyMUs;
+                recordToUpdate.ExBus = ExBus;
                 recordToUpdate.LastModified = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = $"MU value updated successfully for {recordToUpdate.StationName} on {recordToUpdate.DataDate.ToString("yyyy-MM-dd")}!";
+                TempData["SuccessMessage"] = $"MU value updated successfully for Generating Station {recordToUpdate.StationName} on {recordToUpdate.DataDate.ToString("yyyy-MM-dd")}!";
                 return RedirectToPage("./Edit");
             }
             catch (DbUpdateException)
@@ -160,7 +168,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             {
                 _context.DailyMUsDatas.Remove(record);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Record for {record.StationName} on {record.DataDate.ToString("yyyy-MM-dd")} deleted successfully!";
+                TempData["SuccessMessage"] = $"Record for Generating Station {record.StationName} on {record.DataDate.ToString("yyyy-MM-dd")} deleted successfully!";
             }
             else
             {

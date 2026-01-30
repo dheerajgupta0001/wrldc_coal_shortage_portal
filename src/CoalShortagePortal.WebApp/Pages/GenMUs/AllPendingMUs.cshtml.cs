@@ -37,6 +37,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             public string Email { get; set; }
             public bool HasSubmitted { get; set; }
             public float? ExistingMUs { get; set; }
+            public float? ExistingExBus { get; set; }
         }
 
         public class MUEntryModel
@@ -45,6 +46,9 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
             [Range(0.01, double.MaxValue, ErrorMessage = "Daily MUs must be greater than 0")]
             public float? DailyMUs { get; set; }
+
+            [Range(0.01, double.MaxValue, ErrorMessage = "ExBus must be greater than 0")]
+            public float? ExBus { get; set; }
         }
 
         public async Task<IActionResult> OnGetAsync()
@@ -58,12 +62,17 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
             YesterdayDate = DateTime.Now.AddDays(-1).Date;
 
-            // Get all users (generators)
-            var allUsers = await _userManager.Users.ToListAsync();
+            // Get all users (generators) - excluding stations starting with "wr_"
+            var allUsers = await _userManager.Users
+                //added feature to exclude username that start with "wr_"
+                .Where(u => !u.UserName.StartsWith("wr_"))
+                .ToListAsync();
 
-            // Get all submissions for yesterday
+            // Get all submissions for yesterday - excluding stations starting with "wr_"
             var yesterdaySubmissions = await _context.DailyMUsDatas
-                .Where(d => d.DataDate.Date == YesterdayDate)
+                //.Where(d => d.DataDate.Date == YesterdayDate)
+                //added feature to exclude username that start with "wr_"
+                .Where(d => d.DataDate.Date == YesterdayDate && !d.StationName.StartsWith("wr_"))
                 .ToListAsync();
 
             PendingGenerators = new List<PendingMUViewModel>();
@@ -81,7 +90,8 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                     StationName = user.UserName,
                     Email = user.Email,
                     HasSubmitted = submission != null,
-                    ExistingMUs = submission?.DailyMUs
+                    ExistingMUs = submission?.DailyMUs,
+                    ExistingExBus = submission?.ExBus
                 });
             }
 
@@ -128,6 +138,12 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             {
                 try
                 {
+                    // Validate ExBus if provided
+                    if (entry.ExBus.HasValue && entry.ExBus <= 0)
+                    {
+                        errorMessages.Add($"{entry.StationName}: ExBus must be greater than 0");
+                        continue;
+                    }
                     // Check if already exists
                     var existing = await _context.DailyMUsDatas
                         .FirstOrDefaultAsync(d => d.DataDate.Date == YesterdayDate
@@ -143,6 +159,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                     {
                         DataDate = DateTime.SpecifyKind(YesterdayDate, DateTimeKind.Utc),
                         DailyMUs = entry.DailyMUs.Value,
+                        ExBus = entry.ExBus.Value,
                         StationName = entry.StationName
                     };
 
@@ -160,7 +177,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 try
                 {
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"Successfully saved {successCount} MU record(s)";
+                    TempData["SuccessMessage"] = $"Successfully saved {successCount} MU & ExBus record(s)";
                 }
                 catch (Exception ex)
                 {
@@ -187,6 +204,13 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 return RedirectToPage("/Index");
             }
 
+            // Prevent deletion of records for stations starting with "wr_"
+            if (stationName.StartsWith("wr_"))
+            {
+                TempData["ErrorMessage"] = "Cannot delete records for stations starting with 'wr_'";
+                return RedirectToPage();
+            }
+
             YesterdayDate = DateTime.Now.AddDays(-1).Date;
 
             var record = await _context.DailyMUsDatas
@@ -197,7 +221,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             {
                 _context.DailyMUsDatas.Remove(record);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Record for {stationName} deleted successfully";
+                TempData["SuccessMessage"] = $"Record for Generating Station {stationName} deleted successfully";
             }
             else
             {

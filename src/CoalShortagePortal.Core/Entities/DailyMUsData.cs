@@ -14,6 +14,8 @@ namespace CoalShortagePortal.Core.Entities
         [Required]
         public float DailyMUs { get; set; }
 
+        public float ExBus { get; set; }
+
         [Required]
         public string StationName { get; set; }
 
