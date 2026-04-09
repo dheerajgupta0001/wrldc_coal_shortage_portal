@@ -35,6 +35,57 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         [Range(0.01, float.MaxValue, ErrorMessage = "ExBus must be greater than 0")]
         public float ExBus { get; set; }
 
+        // PeakMW features added
+        [Required]
+        [BindProperty]
+        [Display(Name = "Peak MW")]
+        [Range(1, int.MaxValue, ErrorMessage = "Peak MW must be greater than 0")]
+        public int PeakMW { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Peak MW Time")]
+        [DataType(DataType.Time)]
+        public TimeSpan PeakMWTime { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Off Peak MW")]
+        [Range(1, int.MaxValue, ErrorMessage = "Off Peak MW must be greater than 0")]
+        public int OffPeakMW { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Off Peak MW Time")]
+        [DataType(DataType.Time)]
+        public TimeSpan OffPeakMWTime { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Day Peak MW")]
+        [Range(1, int.MaxValue, ErrorMessage = "Day Peak MW must be greater than 0")]
+        public int DayPeakMW { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Day Peak MW Time")]
+        [DataType(DataType.Time)]
+        public TimeSpan DayPeakMWTime { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Min Generation")]
+        [Range(1, int.MaxValue, ErrorMessage = "Min Generation must be greater than 0")]
+        public int MinGeneration { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Min Generation Time")]
+        [DataType(DataType.Time)]
+        public TimeSpan MinGenerationTime { get; set; }
+
+        // PeakMW features ended
+
         [Required]
         public string StationName { get; set; }
 
@@ -54,6 +105,13 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         public async Task OnGetAsync()
         {
             DataDate = DateTime.Now.AddDays(-1).Date;
+
+            // Set default times based on requirements to 19 & 3
+            PeakMWTime = new TimeSpan(19, 0, 0); // 19:00 hrs
+            OffPeakMWTime = new TimeSpan(3, 0, 0); // 03:00 hrs
+            // Default Time set to 19 & 3
+
+
             var query = _context.DailyMUsDatas.AsQueryable();
 
             // Filter by StationName only if user is not admin
@@ -96,6 +154,14 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 DataDate = DateTime.SpecifyKind(DataDate.Date, DateTimeKind.Utc),
                 DailyMUs = DailyMUs,
                 ExBus = ExBus,
+                PeakMW = PeakMW,
+                PeakMWTime = PeakMWTime,
+                OffPeakMW = OffPeakMW,
+                OffPeakMWTime = OffPeakMWTime,
+                DayPeakMW = DayPeakMW,
+                DayPeakMWTime = DayPeakMWTime,
+                MinGeneration = MinGeneration,
+                MinGenerationTime = MinGenerationTime,
                 StationName = User.Identity.Name
                 // Add other properties as needed
             };

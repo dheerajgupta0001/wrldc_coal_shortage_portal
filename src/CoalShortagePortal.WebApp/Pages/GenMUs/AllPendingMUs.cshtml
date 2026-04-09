@@ -4,6 +4,7 @@
     ViewData["Title"] = "Pending MUs";
     var pendingCount = Model.PendingGenerators?.Count(p => !p.HasSubmitted) ?? 0;
     var submittedCount = Model.PendingGenerators?.Count(p => p.HasSubmitted) ?? 0;
+    var allSubmitted = pendingCount == 0 && (Model.PendingGenerators?.Any() ?? false);
 }
 
 <div class="container-fluid mt-4">
@@ -31,7 +32,7 @@
                 <i class="fas fa-info-circle"></i>
                 <span class="ml-3">
                     <i class="fas fa-lightbulb"></i>
-                    Enter <strong> MU & ExBus </strong> values for generators who haven't submitted yet for <strong> @Model.YesterdayDate.ToString("dddd, MMMM dd, yyyy") </strong>
+                    Enter <strong> MU &amp; ExBus, ExBus, Peak MW, and Time </strong> values for generators who haven't submitted yet for <strong> @Model.YesterdayDate.ToString("dddd, MMMM dd, yyyy") </strong>
                 </span>
             </div>
         </div>
@@ -68,7 +69,7 @@
     }
 
     <div class="row justify-content-md-center">
-        <div class="col-8">
+        <div class="col-9">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
@@ -97,6 +98,18 @@
                                         <th style="width: 15%;" class="text-center">
                                             <i class="fas fa-plug"></i> ExBus
                                         </th>
+                                        <th style="width: 10%;" class="text-center">
+                                            <i class="fas fa-arrow-up"></i> PEAK MW
+                                        </th>
+                                        <th style="width: 10%;" class="text-center">
+                                            <i class="fas fa-arrow-down"></i> OFF PEAK
+                                        </th>
+                                        <th style="width: 10%;" class="text-center">
+                                            <i class="fas fa-sun"></i> DAY PEAK
+                                        </th>
+                                        <th style="width: 10%;" class="text-center">
+                                            <i class="fas fa-chart-line"></i> MIN GEN
+                                        </th>
                                         <th style="width: 8%;" class="text-center">
                                             <i class="fas fa-cog"></i> ACTION
                                         </th>
@@ -124,13 +137,13 @@
                                                     @if (generator.HasSubmitted)
                                                     {
                                                         <span class="badge badge-success badge-pill px-3 py-2 text-dark">
-                                                            <i class="fas fa-check-circle"></i><strong> Submitted
+                                                            <i class="fas fa-check-circle"></i><strong> Submitted</strong>
                                                         </span>
                                                     }
                                                     else
                                                     {
                                                         <span class="badge badge-danger badge-pill px-3 py-2 text-dark">
-                                                            <i class="fas fa-times-circle"></i><strong> Pending
+                                                            <i class="fas fa-times-circle"></i><strong> Pending</strong>
                                                         </span>
                                                     }
                                                 </td>
@@ -171,6 +184,111 @@
                                                                placeholder="Enter ExBus"
                                                                style="max-width: 150px; margin: 0 auto;" />
                                                         <span class="text-danger field-validation-valid" data-valmsg-for="MUEntries[@(entryIndex)].ExBus" data-valmsg-replace="true"></span>
+                                                    }
+                                                </td>
+                                                @* PeakMW OffPeakMW DayPeak MinGeneration *@
+                                                <td class="align-middle text-center">
+                                                    @if (generator.HasSubmitted)
+                                                    {
+                                                        <div>
+                                                            <span class="badge badge-primary text-white px-2 py-1" style="font-size: 0.85rem;">
+                                                                @generator.ExistingPeakMW MW
+                                                            </span>
+                                                            <br />
+                                                            <small class="text-muted" style="font-size: 0.7rem;">@generator.ExistingPeakMWTime?.ToString(@"hh\:mm")</small>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="number"
+                                                               name="MUEntries[@(entryIndex)].PeakMW"
+                                                               class="form-control form-control-sm mb-1"
+                                                               step="1"
+                                                               min="1"
+                                                               placeholder="MW"
+                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                        <input type="time"
+                                                               name="MUEntries[@(entryIndex)].PeakMWTime"
+                                                               class="form-control form-control-sm"
+                                                               value="@(Model.MUEntries[entryIndex].PeakMWTime?.ToString(@"hh\:mm") ?? "19:00")" />
+                                                    }
+                                                </td>
+                                                <td class="align-middle text-center">
+                                                    @if (generator.HasSubmitted)
+                                                    {
+                                                        <div>
+                                                            <span class="badge badge-dark text-white px-2 py-1" style="font-size: 0.85rem;">
+                                                                @generator.ExistingOffPeakMW MW
+                                                            </span>
+                                                            <br />
+                                                            <small class="text-muted" style="font-size: 0.7rem;">@generator.ExistingOffPeakMWTime?.ToString(@"hh\:mm")</small>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="number"
+                                                               name="MUEntries[@(entryIndex)].OffPeakMW"
+                                                               class="form-control form-control-sm mb-1"
+                                                               step="1"
+                                                               min="1"
+                                                               placeholder="MW"
+                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                        <input type="time"
+                                                               name="MUEntries[@(entryIndex)].OffPeakMWTime"
+                                                               class="form-control form-control-sm"
+                                                               value="@(Model.MUEntries[entryIndex].OffPeakMWTime?.ToString(@"hh\:mm") ?? "03:00")" />
+                                                    }
+                                                </td>
+                                                <td class="align-middle text-center">
+                                                    @if (generator.HasSubmitted)
+                                                    {
+                                                        <div>
+                                                            <span class="badge badge-warning text-dark px-2 py-1" style="font-size: 0.85rem;">
+                                                                @generator.ExistingDayPeakMW MW
+                                                            </span>
+                                                            <br />
+                                                            <small class="text-muted" style="font-size: 0.7rem;">@generator.ExistingDayPeakMWTime?.ToString(@"hh\:mm")</small>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="number"
+                                                               name="MUEntries[@(entryIndex)].DayPeakMW"
+                                                               class="form-control form-control-sm mb-1"
+                                                               step="1"
+                                                               min="1"
+                                                               placeholder="MW"
+                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                        <input type="time"
+                                                               name="MUEntries[@(entryIndex)].DayPeakMWTime"
+                                                               class="form-control form-control-sm"
+                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                    }
+                                                </td>
+                                                <td class="align-middle text-center">
+                                                    @if (generator.HasSubmitted)
+                                                    {
+                                                        <div>
+                                                            <span class="badge badge-success text-white px-2 py-1" style="font-size: 0.85rem;">
+                                                                @generator.ExistingMinGeneration MW
+                                                            </span>
+                                                            <br />
+                                                            <small class="text-muted" style="font-size: 0.7rem;">@generator.ExistingMinGenerationTime?.ToString(@"hh\:mm")</small>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="number"
+                                                               name="MUEntries[@(entryIndex)].MinGeneration"
+                                                               class="form-control form-control-sm mb-1"
+                                                               step="1"
+                                                               min="1"
+                                                               placeholder="MW"
+                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                        <input type="time"
+                                                               name="MUEntries[@(entryIndex)].MinGenerationTime"
+                                                               class="form-control form-control-sm"
+                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
                                                     }
                                                     @if (!generator.HasSubmitted)
                                                     {
@@ -222,7 +340,7 @@
                                         </small>
                                     </div>
                                     <button type="submit" class="btn btn-success btn-lg">
-                                        <i class="fas fa-save"></i> Save All MU Data
+                                        <i class="fas fa-save"></i> SAVE ALL MU DATA
                                     </button>
                                 </div>
                             </div>
@@ -230,13 +348,42 @@
                     </form>
                 </div>
             </div>
+
+            {{!-- ========= EXPORT BUTTON — only active when all stations submitted ========= --!}}
+            <div class="d-flex flex-column align-items-end mt-3 mb-5">
+                @if (allSubmitted)
+                {
+                    <a asp-page-handler="ExportExcel"
+                       class="btn btn-export-active btn-lg">
+                        <i class="fas fa-file-excel mr-2"></i>
+                        Export Yesterday's Data to Excel
+                    </a>
+                    <small class="text-success mt-2">
+                        <i class="fas fa-check-circle mr-1"></i>
+                        All @submittedCount station(s) submitted — export is ready!
+                    </small>
+                }
+                else
+                {
+                    <button class="btn btn-export-locked btn-lg" disabled
+                            title="All generators must submit before export is available">
+                        <i class="fas fa-lock mr-2"></i>
+                        Export Yesterday's Data to Excel
+                    </button>
+                    <small class="text-danger mt-2">
+                        <i class="fas fa-hourglass-half mr-1"></i>
+                        @pendingCount station(s) still pending — export unlocks when all submit
+                    </small>
+                }
+            </div>
+
         </div>
     </div>
 </div>
 
 <style>
     body {
-        background-color: #f8f9fa;
+        background-color: #FCF7F7;
     }
 
     .card {
@@ -255,26 +402,26 @@
         background-color: #ffffff;
     }
 
-    .table thead th {
-        font-weight: 700;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 1px;
-        padding: 1rem;
-        background-color: #343a40 !important;
-        color: #ffffff !important;
-        border: none;
-    }
+        .table thead th {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            padding: 1rem;
+            background-color: #343a40 !important;
+            color: #ffffff !important;
+            border: none;
+        }
 
-    .table tbody td {
-        padding: 1rem;
-        vertical-align: middle;
-        border-bottom: 1px solid #dee2e6;
-    }
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #dee2e6;
+        }
 
-    .table tbody tr {
-        transition: all 0.2s;
-    }
+        .table tbody tr {
+            transition: all 0.2s;
+        }
 
     .table-warning {
         background-color: #fff3cd !important;
@@ -328,29 +475,46 @@
         border: 2px solid #dee2e6;
     }
 
-    .form-control-sm:focus {
-        border-color: #28a745;
-        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.15);
-    }
+        .form-control-sm:focus {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.15);
+        }
 
     .card-footer {
         padding: 1rem 1.5rem;
     }
 
-    @* @@keyframes blink {
-        0%, 100% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.3;
-        }
+    /* =============================================
+           EXPORT BUTTON STYLES
+           ============================================= */
+    .btn-export-active {
+        background: linear-gradient(135deg, #1a7a1a 0%, #28a745 100%);
+        color: #ffffff !important;
+        border: none;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
     }
 
-    .blink-badge {
-        animation: blink 1.5s infinite;
-    } *@
-    @* Flashy pulsing animation for Pending badge *@
+        .btn-export-active:hover {
+            background: linear-gradient(135deg, #145214 0%, #1e7e34 100%);
+            color: #ffffff !important;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.55);
+            text-decoration: none;
+        }
+
+    .btn-export-locked {
+        background: #e9ecef;
+        color: #adb5bd !important;
+        border: 2px dashed #ced4da;
+        cursor: not-allowed;
+        display: inline-flex;
+        align-items: center;
+        opacity: 0.75;
+    }
+
     @@keyframes flashy-blink {
         0%, 100% {
             opacity: 1;

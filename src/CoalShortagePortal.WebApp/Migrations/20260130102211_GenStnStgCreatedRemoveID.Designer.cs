@@ -3,6 +3,7 @@ using System;
 using CoalShortagePortal.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CoalShortagePortal.WebApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260130102211_GenStnStgCreatedRemoveID")]
+    partial class GenStnStgCreatedRemoveID
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -159,12 +162,6 @@ namespace CoalShortagePortal.WebApp.Migrations
                     b.Property<DateTime>("DataDate")
                         .HasColumnType("date");
 
-                    b.Property<int>("DayPeakMW")
-                        .HasColumnType("integer");
-
-                    b.Property<TimeSpan>("DayPeakMWTime")
-                        .HasColumnType("interval");
-
                     b.Property<float>("ExBus")
                         .HasColumnType("real");
 
@@ -173,24 +170,6 @@ namespace CoalShortagePortal.WebApp.Migrations
 
                     b.Property<string>("LastModifiedById")
                         .HasColumnType("text");
-
-                    b.Property<int>("MinGeneration")
-                        .HasColumnType("integer");
-
-                    b.Property<TimeSpan>("MinGenerationTime")
-                        .HasColumnType("interval");
-
-                    b.Property<int>("OffPeakMW")
-                        .HasColumnType("integer");
-
-                    b.Property<TimeSpan>("OffPeakMWTime")
-                        .HasColumnType("interval");
-
-                    b.Property<int>("PeakMW")
-                        .HasColumnType("integer");
-
-                    b.Property<TimeSpan>("PeakMWTime")
-                        .HasColumnType("interval");
 
                     b.Property<string>("StationName")
                         .IsRequired()
@@ -282,18 +261,6 @@ namespace CoalShortagePortal.WebApp.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedById")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("LastModified")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LastModifiedById")
-                        .HasColumnType("text");
-
                     b.Property<int>("Stage")
                         .HasColumnType("integer");
 
@@ -302,10 +269,6 @@ namespace CoalShortagePortal.WebApp.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CreatedById");
-
-                    b.HasIndex("LastModifiedById");
 
                     b.HasIndex("Stage", "StationName")
                         .IsUnique();
@@ -778,21 +741,6 @@ namespace CoalShortagePortal.WebApp.Migrations
                 });
 
             modelBuilder.Entity("CoalShortagePortal.Core.Entities.ExpectedRevivalResponse", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "CreatedBy")
-                        .WithMany()
-                        .HasForeignKey("CreatedById");
-
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "LastModifiedBy")
-                        .WithMany()
-                        .HasForeignKey("LastModifiedById");
-
-                    b.Navigation("CreatedBy");
-
-                    b.Navigation("LastModifiedBy");
-                });
-
-            modelBuilder.Entity("CoalShortagePortal.Core.Entities.GenStnStg", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "CreatedBy")
                         .WithMany()

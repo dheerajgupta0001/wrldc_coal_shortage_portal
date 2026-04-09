@@ -3,28 +3,277 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - CoalShortageDataEntryPortal</title>
+    <title>@ViewData["Title"] - Coal Shortage Data Entry Portal</title>
     <link rel="stylesheet" href="~/lib/node_modules/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" />
+    <style>
+        /* ============================================
+                   NAVBAR - STICKY AT TOP
+                   ============================================ */
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+            padding: 0.7rem 0;
+            margin-bottom: 0 !important;
+            border-bottom: none !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 1030 !important;
+        }
+
+            /* Brand */
+            .navbar .navbar-brand {
+                color: #ffffff !important;
+                font-weight: 700;
+                font-size: 1.1rem;
+                white-space: nowrap;
+                letter-spacing: 0.3px;
+            }
+
+                .navbar .navbar-brand:hover {
+                    color: #ffe066 !important;
+                }
+
+                .navbar .navbar-brand .brand-icon {
+                    margin-right: 0.45rem;
+                    opacity: 0.9;
+                }
+
+                .navbar .navbar-brand .brand-sub {
+                    font-weight: 400;
+                    opacity: 0.75;
+                    font-size: 0.88rem;
+                }
+
+            /* Toggler (mobile hamburger) */
+            .navbar .navbar-toggler {
+                border-color: rgba(255, 255, 255, 0.4);
+            }
+
+            .navbar .navbar-toggler-icon {
+                filter: invert(1);
+            }
+
+            /* ---- Top-level nav links ---- */
+            .navbar .nav-link,
+            .navbar .dropdown-toggle {
+                color: #ffffff !important;
+                font-weight: 600;
+                font-size: 0.88rem;
+                padding: 0.6rem 0.75rem !important;
+                border-radius: 8px;
+                transition: all 0.3s ease;
+                position: relative;
+                white-space: nowrap;
+            }
+
+                .navbar .nav-link:hover,
+                .navbar .dropdown-toggle:hover {
+                    background: rgba(255, 255, 255, 0.18);
+                    color: #fff !important;
+                }
+
+                /* Dropdown arrow rotate */
+                .navbar .dropdown-toggle::after {
+                    margin-left: 0.4rem;
+                    transition: transform 0.3s ease;
+                }
+
+            .navbar .dropdown.show .dropdown-toggle::after {
+                transform: rotate(180deg);
+            }
+
+            /* ============================================
+                   DROPDOWN MENU
+                   ============================================ */
+            .navbar .dropdown-menu {
+                background: #ffffff !important;
+                border: none;
+                border-radius: 12px;
+                box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+                padding: 0.4rem;
+                margin-top: 0.4rem;
+                min-width: 200px;
+            }
+
+                .navbar .dropdown-menu .nav-link,
+                .navbar .dropdown-menu a.nav-link {
+                    color: #2d3436 !important;
+                    font-weight: 500;
+                    font-size: 0.87rem;
+                    padding: 0.5rem 0.85rem !important;
+                    border-radius: 8px;
+                    margin: 0.15rem 0;
+                    white-space: nowrap;
+                    transition: all 0.25s ease;
+                }
+
+                    .navbar .dropdown-menu .nav-link:hover,
+                    .navbar .dropdown-menu a.nav-link:hover {
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                        color: #ffffff !important;
+                        transform: translateX(5px);
+                    }
+
+                .navbar .dropdown-menu hr.dropdown-divider {
+                    border: none;
+                    border-top: 1px solid #eee;
+                    margin: 0.35rem 0.4rem;
+                }
+
+        /* ============================================
+                   ICONS
+                   ============================================ */
+        .nav-icon {
+            margin-right: 0.4rem;
+            font-size: 0.9rem;
+            width: 0.95rem;
+            text-align: center;
+            display: inline-block;
+        }
+
+        /* ============================================
+                   BADGE
+                   ============================================ */
+        .nav-badge {
+            background: linear-gradient(135deg, #ff6b6b, #ff5252);
+            color: #fff;
+            font-size: 0.6rem;
+            padding: 0.18rem 0.5rem;
+            border-radius: 20px;
+            margin-left: 0.35rem;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(255, 107, 107, 0.4);
+            vertical-align: middle;
+            animation: navPulse 2s infinite;
+        }
+
+        @@keyframes navPulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        /* ============================================
+                   LOGIN PARTIAL (Hello admin! / Logout)
+                   ============================================ */
+        .navbar .navbar-nav.ms-auto .nav-link {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-weight: 500;
+            font-size: 0.87rem;
+            padding: 0.6rem 0.7rem !important;
+        }
+
+            .navbar .navbar-nav.ms-auto .nav-link:hover {
+                color: #ffffff !important;
+                background: rgba(255, 255, 255, 0.15);
+            }
+
+        /* ============================================
+                   FOOTER - NOT FIXED
+                   ============================================ */
+        footer {
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            padding: 1rem 0;
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 3rem;
+        }
+
+            footer a {
+                color: #667eea;
+                text-decoration: none;
+            }
+
+                footer a:hover {
+                    color: #764ba2;
+                    text-decoration: underline;
+                }
+
+        /* ============================================
+                   MOBILE
+                   ============================================ */
+        @@media (max-width: 576px) {
+            .navbar {
+                padding: 0.55rem 0.5rem;
+            }
+
+                .navbar .navbar-brand {
+                    font-size: 0.95rem;
+                }
+
+                    .navbar .navbar-brand .brand-sub {
+                        display: none;
+                    }
+
+                .navbar .nav-link,
+                .navbar .dropdown-toggle {
+                    padding: 0.5rem 0.6rem !important;
+                    font-size: 0.84rem;
+                }
+        }
+        header {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 9999 !important;
+            width: 100% !important;
+        }
+
+            header .navbar {
+                position: relative !important;
+                margin-bottom: 0 !important;
+            }
+
+        /* Ensure body doesn't have padding that might interfere */
+        body {
+            padding-top: 0 !important;
+        }
+
+        footer {
+            position: sticky !important;
+            bottom: 0 !important;
+            z-index: 9999 !important;
+            width: 100% !important;
+        }
+    </style>
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-sm navbar-light">
             <div class="container">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">CoalShortageDataEntryPortal</a>
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                <!-- Brand - NO LINE BREAKS -->
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="fas fa-industry brand-icon"></i>Coal Shortage <span class="brand-sub">Data Entry Portal</span>
+                </a>
+
+                <!-- Mobile toggler -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+                        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
-                    <partial name="_LoginPartial" />
+
+                <!-- Collapse -->
+                <div class="navbar-collapse collapse d-sm-inline-flex">
+                    <!-- Left nav links -->
                     <ul class="navbar-nav flex-grow-1">
                         <partial name="_AuthorizedPartial" />
+                    </ul>
+
+                    <!-- Right: Hello admin / Logout -->
+                    <ul class="navbar-nav ms-auto">
+                        <partial name="_LoginPartial" />
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
+
     <div class="container-fluid">
         <main role="main" class="pb-3">
             <partial name="_StatusBaloonPartial" model=@TempData["StatusBaloon"] />
@@ -32,11 +281,13 @@
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
+    <!-- Footer - NORMAL (not fixed) -->
+    <footer class="position-fixed">
         <div class="container">
-            &copy; 2019 - CoalShortageDataEntryPortal - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2024 - Coal Shortage Data Entry Portal - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>
+
     <script src="~/lib/node_modules/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

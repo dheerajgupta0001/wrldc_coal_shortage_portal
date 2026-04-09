@@ -3,66 +3,106 @@
 @inject SignInManager<IdentityUser> SignInManager
 @inject UserManager<IdentityUser> UserManager
 
-
 @if (SignInManager.IsSignedIn(User))
 {
-    @if (User.IsInRole(SecurityConstants.AdminRoleString))
+    if (User.IsInRole(SecurityConstants.AdminRoleString))
     {
+        <!-- ===== ADMIN LINKS ===== -->
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-area="" asp-controller="UserManage" asp-action="Index">Users</a>
+            <a class="nav-link" asp-area="" asp-controller="UserManage" asp-action="Index">
+                <i class="fas fa-users-cog nav-icon"></i>Users
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="" asp-controller="StageManage" asp-action="Index">
+                <i class="fas fa-layer-group nav-icon"></i>Gen Stn Stages
+            </a>
         </li>
 
-        <!-- Dropdown -->
+        <!-- Generators Dropdown -->
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" role="button" aria-expanded="false">
-                Generators
+                <i class="fas fa-bolt nav-icon"></i>Generators
             </a>
             <ul class="dropdown-menu">
-                <li class="nav-item"><a class="nav-link text-dark" asp-area="" asp-controller="CoalShortageGens" asp-action="Index">Coal Shortage</a>
-                <li />
-                <li class="nav-item"><a class="nav-link text-dark" asp-area="" asp-controller="OtherReasonGens" asp-action="Index">Other Reason</a>
-                <li />
-                <li class="nav-item"><a class="nav-link text-dark" asp-area="" asp-controller="CriticalCoalGens" asp-action="Index">Critical Coal</a>
-                <li />
+                <li>
+                    <a class="nav-link" asp-area="" asp-controller="CoalShortageGens" asp-action="Index">
+                        <i class="fas fa-fire-alt nav-icon"></i>Coal Shortage
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link" asp-area="" asp-controller="OtherReasonGens" asp-action="Index">
+                        <i class="fas fa-exclamation-triangle nav-icon"></i>Other Reason
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link" asp-area="" asp-controller="CriticalCoalGens" asp-action="Index">
+                        <i class="fas fa-exclamation-circle nav-icon"></i>Critical Coal
+                    </a>
+                </li>
             </ul>
         </li>
+
+        <!-- View Data Dropdown -->
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" role="button" aria-expanded="false">
-                View Data
+                <i class="fas fa-chart-line nav-icon"></i>View Data
             </a>
             <ul class="dropdown-menu">
-                <li class="nav-item">
-                    <a class="nav-link text-dark" asp-page="/ViewData/CoalShortage">Coal Shortage</a>
-                <li />
-                <li class="nav-item">
-                    <a class="nav-link text-dark" asp-page="/ViewData/OtherReasons">Other Reasons</a>
-                <li />
-                <li class="nav-item">
-                    <a class="nav-link text-dark" asp-page="/ViewData/CriticalCoal">Critical Coal</a>
-                <li />
-                <li class="nav-item">
-                    <a class="nav-link text-dark" asp-page="/UnrevGens/Index">Expected Revival</a>
-                <li />
-                <li class="nav-item">
-                    <a class="nav-link text-dark" asp-page="/GenMUs/Index">Daily MUs</a>
-                <li />
+                <li>
+                    <a class="nav-link" asp-page="/ViewData/CoalShortage">
+                        <i class="fas fa-chart-bar nav-icon"></i>Coal Shortage
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link" asp-page="/ViewData/OtherReasons">
+                        <i class="fas fa-chart-pie nav-icon"></i>Other Reasons
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link" asp-page="/ViewData/CriticalCoal">
+                        <i class="fas fa-chart-area nav-icon"></i>Critical Coal
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                    <a class="nav-link" asp-page="/UnrevGens/Index">
+                        <i class="fas fa-redo-alt nav-icon"></i>Expected Revival
+                    </a>
+                </li>
+                <li>
+                    <a class="nav-link" asp-page="/GenMUs/Index">
+                        <i class="fas fa-calendar-day nav-icon"></i>Daily MUs
+                    </a>
+                </li>
             </ul>
         </li>
     }
+
+    <!-- ===== COMMON USER LINKS ===== -->
     <li class="nav-item">
-        <a class="nav-link text-dark" asp-area="" asp-controller="CoalData" asp-action="Index">CoalData</a>
+        <a class="nav-link" asp-area="" asp-controller="CoalData" asp-action="Index">
+            <i class="fas fa-database nav-icon"></i>Coal Data
+        </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link text-dark" asp-page="/UnrevGens/Index">Expected Revival</a>
+        <a class="nav-link" asp-page="/UnrevGens/Index">
+            <i class="fas fa-sync-alt nav-icon"></i>Expected Revival
+        </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link text-dark" asp-page="/GenMUs/Index">Daily MUs</a>
+        <a class="nav-link" asp-page="/GenMUs/Index">
+            <i class="fas fa-calendar-check nav-icon"></i>Daily MUs
+        </a>
     </li>
-    @if (User.IsInRole(SecurityConstants.AdminRoleString))
+
+    if (User.IsInRole(SecurityConstants.AdminRoleString))
     {
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-page="/GenMUs/AllPendingMUs">Pending MUs</a>
+            <a class="nav-link" asp-page="/GenMUs/AllPendingMUs">
+                <i class="fas fa-clock nav-icon"></i>Pending MUs
+                <span class="nav-badge">New</span>
+            </a>
         </li>
     }
 }
-

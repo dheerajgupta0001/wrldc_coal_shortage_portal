@@ -1,0 +1,67 @@
+@model CoalShortagePortal.WebApp.Models.StageCreateVM
+@{
+    ViewData["Title"] = "Add New Stage";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row justify-content-md-center">
+        <div class="col-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>@ViewData["Title"]</h2>
+
+                <hr />
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <form method="post">
+                        <div asp-validation-summary="All" class="text-danger"></div>
+            
+                        <div class="form-group">
+                            <label asp-for="StationName" class="control-label"></label>
+                            <select asp-for="StationName" class="form-control">
+                                <option value="">-- Select Station --</option>
+                                @foreach (var station in Model.AvailableStations)
+                                {
+                                    <option value="@station">@station</option>
+                                }
+                            </select>
+                            <span asp-validation-for="StationName" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="Stage" class="control-label"></label>
+                            <input asp-for="Stage" class="form-control" type="number" min="1" />
+                            <span asp-validation-for="Stage" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Create Stage
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+    
+                <div class="col-md-6">
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> Information</h5>
+                        <ul>
+                            <li>Select the generating station name from the dropdown</li>
+                            <li>Enter the stage number (must be a positive number)</li>
+                            <li>Each station can have multiple stages, but each stage number must be unique per station</li>
+                            <li>Stage 1 is automatically created when a new user is registered</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            @section Scripts {
+                @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+            }
+        </div>
+    </div>
+</div>

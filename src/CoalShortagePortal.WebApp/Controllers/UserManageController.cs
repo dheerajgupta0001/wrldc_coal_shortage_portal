@@ -1,15 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using CoalShortagePortal.Core;
-using CoalShortagePortal.WebApp.Models;
+﻿using CoalShortagePortal.Core;
+using CoalShortagePortal.Core.Entities;
+using CoalShortagePortal.Data;
 using CoalShortagePortal.WebApp.Extensions;
+using CoalShortagePortal.WebApp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SkiaSharp;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace CoalShortagePortal.WebApp.Controllers
 {
@@ -18,11 +21,13 @@ namespace CoalShortagePortal.WebApp.Controllers
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger _logger;
-        public UserManageController(UserManager<IdentityUser> userManager, ILogger<UserManageController> logger)
+        private readonly ApplicationDbContext _context;
+        public UserManageController(UserManager<IdentityUser> userManager, ILogger<UserManageController> logger, ApplicationDbContext context)
         {
             // acquire user manager via dependency injection
             _userManager = userManager;
             _logger = logger;
+            _context = context;
         }
 
         public async Task<IActionResult> Index()
@@ -89,7 +94,35 @@ namespace CoalShortagePortal.WebApp.Controllers
                         _logger.LogInformation($"Phone verified new user {user.UserName} with id {user.Id} and phone {vm.PhoneNumber} = {phoneVeifyResult.Succeeded}");
                     }
 
-                    return RedirectToAction(nameof(Index)).WithSuccess("New user created");
+                    // *** NEW: Automatically create Stage 1 for the generating station ***
+                    try
+                    {
+                        var currentUser = await _userManager.GetUserAsync(User);
+                        var currentUserId = currentUser?.Id ?? "system";
+                        var currentTime = DateTime.UtcNow;
+
+                        var genStnStg = new GenStnStg
+                        {
+                            StationName = vm.Username,
+                            Stage = 1,
+                            CreatedById = currentUserId,
+                            Created = currentTime,
+                            LastModifiedById = currentUserId,
+                            LastModified = currentTime
+                        };
+
+                        _context.GenStnStgs.Add(genStnStg);
+                        await _context.SaveChangesAsync();
+
+                        _logger.LogInformation($"Automatically created Stage 1 for generating station: {vm.Username}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Failed to create Stage 1 for {vm.Username}: {ex.Message}");
+                        // Continue even if stage creation fails - user is already created
+                    }
+
+                    return RedirectToAction(nameof(Index)).WithSuccess("New user created with Stage 1");
                 }
                 AddErrors(result);
             }
@@ -138,6 +171,8 @@ namespace CoalShortagePortal.WebApp.Controllers
                     return NotFound();
                 }
                 List<IdentityError> identityErrors = new List<IdentityError>();
+                // Store old username for updating GenStnStg records
+                string oldUsername = user.UserName;
                 // change password if not null
                 string newPassword = vm.Password;
                 if (newPassword != null)
@@ -161,7 +196,25 @@ namespace CoalShortagePortal.WebApp.Controllers
                     if (usernameChangeResult.Succeeded)
                     {
                         _logger.LogInformation("Username changed");
+                        // *** NEW: Update StationName in all GenStnStg records ***
+                        try
+                        {
+                            var stageRecords = await _context.GenStnStgs
+                                .Where(g => g.StationName == oldUsername)
+                                .ToListAsync();
 
+                            foreach (var stage in stageRecords)
+                            {
+                                stage.StationName = vm.Username;
+                            }
+
+                            await _context.SaveChangesAsync();
+                            _logger.LogInformation($"Updated {stageRecords.Count} stage records from {oldUsername} to {vm.Username}");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"Failed to update stage records: {ex.Message}");
+                        }
                     }
                     else
                     {

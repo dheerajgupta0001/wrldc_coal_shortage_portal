@@ -5,31 +5,289 @@
     ViewData["Title"] = "Home Page";
 }
 
+<style>
+
+    /* ============================================
+           ACTION CARDS
+           ============================================ */
+    .action-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .action-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem 2rem;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        border: 2px solid transparent;
+    }
+
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transform: scaleX(0);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .action-card:hover {
+            transform: translateY(-12px);
+            box-shadow: 0 20px 50px rgba(102, 126, 234, 0.25);
+            border-color: #667eea;
+        }
+
+            .action-card:hover::before {
+                transform: scaleX(1);
+            }
+
+    .action-card-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: white;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .action-card:hover .action-card-icon {
+        transform: scale(1.1) rotate(5deg);
+        box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+    }
+
+    .action-card h3 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #2d3436;
+        margin-bottom: 0.8rem;
+        transition: color 0.3s ease;
+    }
+
+    .action-card:hover h3 {
+        color: #667eea;
+    }
+
+    .action-card p {
+        font-size: 0.95rem;
+        color: #636e72;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .action-card a {
+        display: inline-block;
+        padding: 0.75rem 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+        .action-card a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+            color: white;
+        }
+
+    /* ============================================
+           MANAGE ACCOUNT CARD (Smaller)
+           ============================================ */
+    .manage-account-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+        max-width: 400px;
+        margin: 2rem auto 0;
+    }
+
+        .manage-account-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .manage-account-card a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+            .manage-account-card a:hover {
+                color: #764ba2;
+            }
+
+        .manage-account-card i {
+            font-size: 1.2rem;
+        }
+
+    /* ============================================
+           LOGIN CARD
+           ============================================ */
+    .login-card {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        margin: 3rem auto;
+        transition: all 0.4s ease;
+    }
+
+        .login-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.2);
+        }
+
+    .login-card-icon {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: white;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        animation: pulse 2s infinite;
+    }
+
+    @@keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.05);
+        }
+    }
+
+    .login-card h2 {
+        font-size: 1.8rem;
+        color: #2d3436;
+        margin-bottom: 1.5rem;
+    }
+
+    .login-card a {
+        display: inline-block;
+        padding: 1rem 3rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+        .login-card a:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
+            color: white;
+        }
+
+    /* ============================================
+           RESPONSIVE
+           ============================================ */
+    @@media (max-width: 768px) {
+
+        .action-cards {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .action-card {
+            padding: 2rem 1.5rem;
+        }
+    }
+</style>
+
+
 <div class="text-center">
     <h2>Welcome</h2>
     <p>Please enter coal shortage related information in this portal for reporting purposes of WRLDC</p>
 </div>
 
+
 @if (SignInManager.IsSignedIn(User))
 {
-    <div class="text-center">
-        <div>
-            <h1><a class="nav-link" asp-area="" asp-controller="CoalData" action="Index">Enter Coal Data</a></h1>
-            <br />
-            <br />
-            <h1><a class="nav-link" asp-page="/UnrevGens/Index">Enter Expected Revival Time</a></h1>
-            <br />
-            <br />
-            <h1><a class="nav-link" asp-page="/GenMUs/Index">Enter Daily MUs</a></h1>
-            <br />
-            <br />
-            <h4><a class="nav-link" asp-area="Identity" asp-page="/Account/Manage/ChangePassword">Manage Account</a></h4>
+    <!-- Main Action Cards -->
+    <div class="action-cards">
+        <!-- Coal Data Card -->
+        <div class="action-card">
+            <h3>Coal Data</h3>
+            <p>Enter and manage coal shortage information and inventory data</p>
+            <a asp-area="" asp-controller="CoalData" asp-action="Index">
+                Enter Coal Data <i class="fas fa-arrow-right ms-2"></i>
+            </a>
         </div>
+
+        <!-- Expected Revival Card -->
+        <div class="action-card">
+            <h3>Expected Revival</h3>
+            <p>Submit expected revival time for generators and units</p>
+            <a asp-page="/UnrevGens/Index">
+                Enter Revival Time <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
+
+        <!-- Daily MUs Card -->
+        <div class="action-card">
+            <h3>Daily MUs</h3>
+            <p>Record daily megawatt unit generation and consumption data</p>
+            <a asp-page="/GenMUs/Index">
+                Enter Daily MUs <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Manage Account (smaller card) -->
+    <div class="manage-account-card">
+        <a asp-area="Identity" asp-page="/Account/Manage/ChangePassword">
+            <i class="fas fa-user-cog"></i>
+            <span>Manage Account & Change Password</span>
+        </a>
     </div>
 }
 else
 {
-    <div class="text-center">
-        <h2><a class="nav-link" asp-area="Identity" asp-page="/Account/Login">Login Here</a></h2>
+    <!-- Login Card for Non-Authenticated Users -->
+    <div class="login-card">
+        <div class="login-card-icon">
+            <i class="fas fa-sign-in-alt"></i>
+        </div>
+        <h2>Access Portal</h2>
+        <a asp-area="Identity" asp-page="/Account/Login">
+            Login Here <i class="fas fa-arrow-right ms-2"></i>
+        </a>
     </div>
 }

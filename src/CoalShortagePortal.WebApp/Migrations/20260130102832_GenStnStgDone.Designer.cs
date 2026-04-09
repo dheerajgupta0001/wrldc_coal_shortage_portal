@@ -3,6 +3,7 @@ using System;
 using CoalShortagePortal.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CoalShortagePortal.WebApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260130102832_GenStnStgDone")]
+    partial class GenStnStgDone
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -159,12 +162,6 @@ namespace CoalShortagePortal.WebApp.Migrations
                     b.Property<DateTime>("DataDate")
                         .HasColumnType("date");
 
-                    b.Property<int>("DayPeakMW")
-                        .HasColumnType("integer");
-
-                    b.Property<TimeSpan>("DayPeakMWTime")
-                        .HasColumnType("interval");
-
                     b.Property<float>("ExBus")
                         .HasColumnType("real");
 
@@ -173,24 +170,6 @@ namespace CoalShortagePortal.WebApp.Migrations
 
                     b.Property<string>("LastModifiedById")
                         .HasColumnType("text");
-
-                    b.Property<int>("MinGeneration")
-                        .HasColumnType("integer");
-
-                    b.Property<TimeSpan>("MinGenerationTime")
-                        .HasColumnType("interval");
-
-                    b.Property<int>("OffPeakMW")
-                        .HasColumnType("integer");
-
-                    b.Property<TimeSpan>("OffPeakMWTime")
-                        .HasColumnType("interval");
-
-                    b.Property<int>("PeakMW")
-                        .HasColumnType("integer");
-
-                    b.Property<TimeSpan>("PeakMWTime")
-                        .HasColumnType("interval");
 
                     b.Property<string>("StationName")
                         .IsRequired()

@@ -34,10 +34,59 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         [Range(0.01, float.MaxValue, ErrorMessage = "Daily MUs must be greater than 0")]
         public float DailyMUs { get; set; }
 
+        [Required]
         [BindProperty]
         [Range(0.01, float.MaxValue, ErrorMessage = "ExBus must be greater than 0")]
         [Display(Name = "ExBus")]
         public float ExBus { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Peak MW")]
+        [Range(1, int.MaxValue, ErrorMessage = "Peak MW must be greater than 0")]
+        public int PeakMW { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Peak MW Time")]
+        [DataType(DataType.Time)]
+        public TimeSpan PeakMWTime { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Off Peak MW")]
+        [Range(1, int.MaxValue, ErrorMessage = "Off Peak MW must be greater than 0")]
+        public int OffPeakMW { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Off Peak MW Time")]
+        [DataType(DataType.Time)]
+        public TimeSpan OffPeakMWTime { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Day Peak MW")]
+        [Range(1, int.MaxValue, ErrorMessage = "Day Peak MW must be greater than 0")]
+        public int DayPeakMW { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Day Peak MW Time")]
+        [DataType(DataType.Time)]
+        public TimeSpan DayPeakMWTime { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Min Generation")]
+        [Range(1, int.MaxValue, ErrorMessage = "Min Generation must be greater than 0")]
+        public int MinGeneration { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Min Generation Time")]
+        [DataType(DataType.Time)]
+        public TimeSpan MinGenerationTime { get; set; }
 
         [BindProperty]
         public string StationName { get; set; }
@@ -71,6 +120,14 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 DataDate = record.DataDate;
                 DailyMUs = record.DailyMUs;
                 ExBus = record.ExBus;
+                PeakMW = record.PeakMW;
+                PeakMWTime = record.PeakMWTime;
+                OffPeakMW = record.OffPeakMW;
+                OffPeakMWTime = record.OffPeakMWTime;
+                DayPeakMW = record.DayPeakMW;
+                DayPeakMWTime = record.DayPeakMWTime;
+                MinGeneration = record.MinGeneration;
+                MinGenerationTime = record.MinGenerationTime;
                 StationName = record.StationName;
                 SelectedRecord = record;
             }
@@ -99,10 +156,10 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 return Page();
             }
 
-            // Only validate DailyMUs & EX Bus
-            if (DailyMUs <= 0 || ExBus <=0)
+            // Validate all fields
+            if (DailyMUs <= 0 || ExBus <= 0 || PeakMW <= 0 || OffPeakMW <= 0 || DayPeakMW <= 0 || MinGeneration <= 0)
             {
-                ModelState.AddModelError("ExBus", "Both Daily MUs & ExBus must be greater than 0.");
+                ModelState.AddModelError("", "All MW and MU values must be greater than 0.");
                 var record = await _context.DailyMUsDatas.FindAsync(SelectedId.Value);
                 if (record != null)
                 {
@@ -126,14 +183,22 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
             try
             {
-                // Only update DailyMUs - keep Date and Station unchanged
+                // Update all editable fields - keep Date and Station unchanged
                 recordToUpdate.DailyMUs = DailyMUs;
                 recordToUpdate.ExBus = ExBus;
+                recordToUpdate.PeakMW = PeakMW;
+                recordToUpdate.PeakMWTime = PeakMWTime;
+                recordToUpdate.OffPeakMW = OffPeakMW;
+                recordToUpdate.OffPeakMWTime = OffPeakMWTime;
+                recordToUpdate.DayPeakMW = DayPeakMW;
+                recordToUpdate.DayPeakMWTime = DayPeakMWTime;
+                recordToUpdate.MinGeneration = MinGeneration;
+                recordToUpdate.MinGenerationTime = MinGenerationTime;
                 recordToUpdate.LastModified = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = $"MU value updated successfully for Generating Station {recordToUpdate.StationName} on {recordToUpdate.DataDate.ToString("yyyy-MM-dd")}!";
+                TempData["SuccessMessage"] = $"Record updated successfully for <strong>{recordToUpdate.StationName}</strong> on {recordToUpdate.DataDate.ToString("yyyy-MM-dd")}!";
                 return RedirectToPage("./Edit");
             }
             catch (DbUpdateException)
@@ -168,7 +233,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             {
                 _context.DailyMUsDatas.Remove(record);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Record for Generating Station {record.StationName} on {record.DataDate.ToString("yyyy-MM-dd")} deleted successfully!";
+                TempData["SuccessMessage"] = $"Record for <strong>{record.StationName}</strong> on {record.DataDate.ToString("yyyy-MM-dd")} deleted successfully!";
             }
             else
             {
