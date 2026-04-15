@@ -1,69 +1,123 @@
 ﻿@page
 @model LoginModel
 @addTagHelper *, DNTCaptcha.Core
-
 @{
     ViewData["Title"] = "Log in";
 }
-
 <div class="row justify-content-center align-items-center">
     <div class="col col-md-4 col-lg-4 col-xl-3">
         <section>
             <form id="account" method="post">
                 <h1>@ViewData["Title"]</h1>
                 <hr />
+
+                @* Success/Info Messages *@
+                @if (TempData["InfoMessage"] != null)
+                {
+                    <div class="alert alert-info alert-dismissible fade show">
+                        <i class="fas fa-info-circle"></i> @TempData["InfoMessage"]
+                        <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    </div>
+                }
+
                 <div asp-validation-summary="All" class="text-danger"></div>
-                <div class="form-group">
-                    <label asp-for="Input.Email"></label>
-                    <input asp-for="Input.Email" class="form-control" autocomplete="off" />
-                    <span asp-validation-for="Input.Email" class="text-danger"></span>
-                </div>
-                <div class="form-group">
-                    <label asp-for="Input.Password"></label>
-                    <input asp-for="Input.Password" class="form-control" autocomplete="off"/>
-                    <span asp-validation-for="Input.Password" class="text-danger"></span>
-                </div>
-                <div class="form-group">
-                    <div class="form-control">
-                        <dnt-captcha asp-captcha-generator-max="99"
-                                     asp-captcha-generator-min="20"
-                                     asp-captcha-generator-language="English"
-                                     asp-captcha-generator-display-mode="SumOfTwoNumbers"
-                                     asp-use-relative-urls="true"
-                                     asp-placeholder="Security code as a number"
-                                     asp-validation-error-message="Please enter the security code as a number."
-                                     asp-font-name="Tahoma"
-                                     asp-font-size="60"
-                                     asp-fore-color="#333333"
-                                     asp-back-color="#ccc"
-                                     asp-text-box-class="text-box single-line form-control col-md-4"
-                                     asp-text-box-template="<div class='input-group col-md-4'><span class='input-group-addon'><span class='glyphicon glyphicon-lock'></span></span>{0}</div>"
-                                     asp-validation-message-class="text-danger"
-                                     asp-refresh-button-class="glyphicon glyphicon-refresh btn-sm"
-                                     asp-use-noise="false" />
+                <input type="hidden" asp-for="Input.RequiresOtp" />
+
+                @if (!Model.Input.RequiresOtp)
+                {
+                    @* Step 1 *@
+                    <input type="hidden" asp-for="Input.RequiresOtp" />
+                    @* Step 1: Username/Email and Password *@
+                    <div class="form-group">
+                        <label asp-for="Input.Email"></label>
+                        <input asp-for="Input.Email" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="Input.Email" class="text-danger"></span>
                     </div>
-                </div>
-                @*<div class="form-group">
-                    <div class="checkbox">
-                        <label asp-for="Input.RememberMe">
-                            <input asp-for="Input.RememberMe" />
-                            @Html.DisplayNameFor(m => m.Input.RememberMe)
+                    <div class="form-group">
+                        <label asp-for="Input.Password"></label>
+                        <input asp-for="Input.Password" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="Input.Password" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-control">
+                            <dnt-captcha asp-captcha-generator-max="99"
+                                         asp-captcha-generator-min="20"
+                                         asp-captcha-generator-language="English"
+                                         asp-captcha-generator-display-mode="SumOfTwoNumbers"
+                                         asp-use-relative-urls="true"
+                                         asp-placeholder="Security code as a number"
+                                         asp-validation-error-message="Please enter the security code as a number."
+                                         asp-font-name="Tahoma"
+                                         asp-font-size="60"
+                                         asp-fore-color="#333333"
+                                         asp-back-color="#ccc"
+                                         asp-text-box-class="text-box single-line form-control col-md-4"
+                                         asp-text-box-template="<div class='input-group col-md-4'><span class='input-group-addon'><span class='glyphicon glyphicon-lock'></span></span>{0}</div>"
+                                         asp-validation-message-class="text-danger"
+                                         asp-refresh-button-class="glyphicon glyphicon-refresh btn-sm"
+                                         asp-use-noise="false" />
+                        </div>
+                    </div>
+                    <div class="form-group mt-3">
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-paper-plane"></i> Send OTP
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    @* Step 2 - force value to true *@
+                    <input type="hidden" name="Input.RequiresOtp" value="true" />
+                    @* Step 2: OTP Verification *@
+                    <div class="alert alert-success">
+                        <i class="fas fa-envelope-open-text"></i> OTP sent to your registered email.
+                    </div>
+
+                    <input type="hidden" asp-for="Input.Email" />
+                    <input type="hidden" asp-for="Input.Password" value="password-already-verified" />
+
+                    <div class="form-group">
+                        <label asp-for="Input.OtpCode">
+                            <i class="fas fa-key"></i> Enter OTP
                         </label>
+                        <input asp-for="Input.OtpCode"
+                               class="form-control text-center"
+                               style="font-size: 28px; letter-spacing: 15px; font-weight: bold;"
+                               maxlength="6"
+                               placeholder="000000"
+                               autocomplete="off"
+                               autofocus />
+                        <span asp-validation-for="Input.OtpCode" class="text-danger"></span>
+                        <small class="form-text text-muted mt-2">
+                            <i class="fas fa-clock"></i> OTP is valid for 5 minutes
+                        </small>
                     </div>
-                </div>*@
-                <div class="form-group mt-3">
-                    <button type="submit" class="btn btn-primary">Log in</button>
-                </div>
-                @* <div class="form-group">
-                    <p>
-                        <a id="forgot-password" asp-page="./ForgotPassword">Forgot your password?</a>
-                    </p>
-                </div> *@
+
+                    <div class="form-group mt-3">
+                        <button type="submit" class="btn btn-success btn-block">
+                            <i class="fas fa-sign-in-alt"></i> Verify & Login
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <a asp-page="./Login" class="btn btn-secondary btn-block">
+                            <i class="fas fa-arrow-left"></i> Start Over
+                        </a>
+                    </div>
+                }
             </form>
         </section>
     </div>
 </div>
 
 @section Scripts {
-<partial name="_ValidationScriptsPartial" />
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Auto-format OTP input - only numbers
+        $(document).ready(function() {
+            $('#Input_OtpCode').on('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+        });
+    </script>
 }
