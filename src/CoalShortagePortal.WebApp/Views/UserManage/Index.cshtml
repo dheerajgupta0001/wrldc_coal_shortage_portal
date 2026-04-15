@@ -35,6 +35,7 @@
                                     <th>Username</th>
                                     <th>Email</th>
                                     <th>Phone</th>
+                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -46,11 +47,34 @@
                                         <td>@user.Email</td>
                                         <td>@user.Phone</td>
                                         <td>
+                                            @if (user.IsLockedOut)
+                                            {
+                                                <span class="badge badge-danger btn-danger">
+                                                    <i class="fas fa-lock"></i> Locked
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-success btn-success">
+                                                    <i class="fas fa-unlock"></i> Active
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>
                                             @* <a asp-action="Edit" asp-route-id="@user.UserId">Edit</a> | *@
                                             <a asp-action="Edit" asp-route-id="@user.UserId"
                                                 class="btn btn-sm btn-primary" title="Edit">
                                                 <i class="fas fa-edit"></i> Edit
                                             </a>
+                                            @if (user.IsLockedOut)
+                                            {
+                                                <form asp-action="UnlockUser" asp-route-id="@user.UserId" method="post" style="display:inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('Are you sure you want to unlock this user?');">
+                                                        <i class="fas fa-unlock-alt"></i> Unlock
+                                                    </button>
+                                                </form>
+                                            }
 
                                             @* <a asp-action="Delete" asp-route-id="@user.UserId">Delete</a> *@
                                             <a asp-action="Delete" asp-route-id="@user.UserId"

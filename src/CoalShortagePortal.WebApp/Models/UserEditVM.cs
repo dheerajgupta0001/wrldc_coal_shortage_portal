@@ -20,5 +20,12 @@ namespace CoalShortagePortal.WebApp.Models
 
         [Phone]
         public string PhoneNumber { get; set; }
+
+        [Required]
+        [Display(Name = "User Type")]
+        public string UserType { get; set; }
+
+        [Display(Name = "State")]
+        public string State { get; set; }
     }
 }

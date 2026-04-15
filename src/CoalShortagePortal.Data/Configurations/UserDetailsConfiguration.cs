@@ -19,7 +19,7 @@ namespace CoalShortagePortal.Data.Configurations
 
             builder
             .HasIndex(u => u.UserId)
-            .IsUnique();    
+            .IsUnique();
         }
     }
 }

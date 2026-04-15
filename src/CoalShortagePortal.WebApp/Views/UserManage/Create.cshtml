@@ -32,6 +32,28 @@
                             <input asp-for="PhoneNumber" class="form-control" />
                             <span asp-validation-for="PhoneNumber" class="text-danger"></span>
                         </div>
+
+                        
+                        
+                        <div class="form-group">
+                            <label asp-for="UserType"></label>
+                            <select asp-for="UserType" class="form-control" id="userTypeSelect">
+                                <option value="">-- Select User Type --</option>
+                                <option value="ISGS">ISGS</option>
+                                <option value="RE">RE</option>
+                                <option value="IPP">IPP</option>
+                                <option value="State_Gen">State_Gen</option>
+                            </select>
+                            <span asp-validation-for="UserType" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="form-group" id="stateField" style="display: none;">
+                            <label asp-for="State"></label>
+                            <input asp-for="State" class="form-control" />
+                            <span asp-validation-for="State" class="text-danger"></span>
+                        </div>
+
+
                         <div class="form-group">
                             <label asp-for="Password"></label>
                             <input asp-for="Password" class="form-control" />
@@ -60,4 +82,21 @@
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        $(document).ready(function () {
+            $('#userTypeSelect').change(function () {
+                if ($(this).val() === 'State_Gen') {
+                    $('#stateField').show();
+                } else {
+                    $('#stateField').hide();
+                    $('#State').val('');
+                }
+            });
+
+            // Trigger on page load in case of validation error
+            if ($('#userTypeSelect').val() === 'State_Gen') {
+                $('#stateField').show();
+            }
+        });
+    </script>
 }

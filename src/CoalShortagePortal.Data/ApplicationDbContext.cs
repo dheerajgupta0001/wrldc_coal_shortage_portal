@@ -28,6 +28,7 @@ namespace CoalShortagePortal.Data
         public DbSet<DailyMUsData> DailyMUsDatas { get; set; }
         public DbSet<GenStnStg> GenStnStgs { get; set; }
         public DbSet<UserDetails> UserDetails { get; set; }
+        public DbSet<UserOtp> UserOtps { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

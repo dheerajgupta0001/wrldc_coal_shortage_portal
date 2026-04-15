@@ -1,14 +1,18 @@
+using CoalShortagePortal.Application.Interfaces;
+using CoalShortagePortal.Application.Security;
+using CoalShortagePortal.Data;
+using CoalShortagePortal.Infrastructure;
+using CoalShortagePortal.Infrastructure.Services;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using CoalShortagePortal.Data;
-using CoalShortagePortal.Application.Security;
-using CoalShortagePortal.Infrastructure;
-using Microsoft.AspNetCore.Mvc;
+using System;
+using CoalShortagePortal.Infrastructure.Services.Email;
 
 namespace CoalShortagePortal.WebApp
 {
@@ -40,15 +44,25 @@ namespace CoalShortagePortal.WebApp
                 options.Password.RequireDigit = true;
                 options.Password.RequireLowercase = true;
                 options.Password.RequireNonAlphanumeric = true;
-                options.Password.RequireUppercase = false;
-                options.Password.RequiredLength = 4;
-                options.Password.RequiredUniqueChars = 2;
+                options.Password.RequireUppercase = true;
+                options.Password.RequiredLength = 8;
+                options.Password.RequiredUniqueChars = 5;
+
+                // ============ LOCKOUT SETTINGS ============
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15); // 10 minutes lockout
+                options.Lockout.MaxFailedAccessAttempts = 5; // Lock after 5 failed attempts
+                options.Lockout.AllowedForNewUsers = true; // Enable lockout for new users
+
             })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
             services.ConfigureApplicationCookie(options =>
             {
+                // ============ SESSION TIMEOUT - 30 MINUTES ============
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Session timeout
+                options.SlidingExpiration = true; // Reset timeout on each request
+
                 // configure login path for return urls
                 // https://docs.microsoft.com/en-us/aspnet/core/security/authentication/identity?view=aspnetcore-3.1&tabs=visual-studio
                 options.LoginPath = "/Identity/Account/Login";
@@ -60,7 +74,20 @@ namespace CoalShortagePortal.WebApp
                 options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest
             );
 
+
+            // ============ HSTS (HTTP Strict Transport Security) ============
+            services.AddHsts(options =>
+            {
+                options.MaxAge = TimeSpan.FromDays(365);
+                options.IncludeSubDomains = true;
+                options.Preload = true;
+            });
+
             services.AddInfrastructure(Configuration, Environment);
+
+            // Register Email and OTP services
+            services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IOtpService, OtpService>();
 
             services
                 .AddControllersWithViews(options =>
