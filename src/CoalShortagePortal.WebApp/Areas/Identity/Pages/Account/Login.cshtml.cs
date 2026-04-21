@@ -1,14 +1,15 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
+﻿using CoalShortagePortal.Application.Interfaces;
+using CoalShortagePortal.Infrastructure.Services;
+using DNTCaptcha.Core;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
-using CoalShortagePortal.Application.Interfaces;
-using DNTCaptcha.Core;
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.Threading.Tasks;
 
 namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
 {
@@ -21,6 +22,9 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
         private readonly IDNTCaptchaValidatorService _validatorService;
         private readonly IEmailService _emailService;
         private readonly IOtpService _otpService;
+        private readonly IOtpRateLimitService _otpRateLimitService;
+
+        private const int BLOCK_MINUTES = 5;
 
         public LoginModel(
             SignInManager<IdentityUser> signInManager,
@@ -28,7 +32,8 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
             UserManager<IdentityUser> userManager,
             IDNTCaptchaValidatorService validatorService,
             IEmailService emailService,
-            IOtpService otpService)
+            IOtpService otpService,
+            IOtpRateLimitService otpRateLimitService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -36,6 +41,7 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
             _validatorService = validatorService;
             _emailService = emailService;
             _otpService = otpService;
+            _otpRateLimitService = otpRateLimitService;
         }
 
         [BindProperty]
@@ -45,6 +51,9 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
 
         [TempData]
         public string ErrorMessage { get; set; }
+
+        public bool IsOtpBlocked { get; set; }
+        public int OtpBlockRemainingMinutes { get; set; }
 
         public class InputModel
         {
@@ -74,43 +83,73 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
 
             returnUrl ??= Url.Content("~/");
 
-            // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
             ReturnUrl = returnUrl;
 
-            // ✅ FIX: Initialize Input so cshtml doesn't throw NullReferenceException
-            Input = new InputModel
+            // Always start with clean Step 1 state
+            Input = new InputModel { RequiresOtp = false };
+            IsOtpBlocked = false;
+            OtpBlockRemainingMinutes = 0;
+
+            // ✅ Check TempData — only set by RedirectToPage from OnPostAsync
+            if (TempData.ContainsKey("IsOtpBlocked") && (bool)TempData["IsOtpBlocked"])
             {
-                RequiresOtp = false
-            };
+                var pendingUserId = TempData["PendingOtpUserId"]?.ToString();
+
+                // ✅ Always verify block against the actual service
+                // not just TempData — service is the single source of truth
+                if (!string.IsNullOrEmpty(pendingUserId)
+                    && _otpRateLimitService.IsBlocked(pendingUserId))
+                {
+                    // Block is still active — calculate REAL remaining time
+                    // from the service, not from TempData
+                    var blockedUntil = _otpRateLimitService.GetBlockedUntil(pendingUserId);
+                    var realRemainingMinutes = blockedUntil.HasValue
+                        ? (int)Math.Ceiling(
+                            (blockedUntil.Value - DateTime.UtcNow).TotalMinutes)
+                        : BLOCK_MINUTES;
+
+                    IsOtpBlocked = true;
+                    OtpBlockRemainingMinutes = realRemainingMinutes;
+                    Input.RequiresOtp = true;
+
+                    // ✅ Do NOT re-set TempData here — let it expire naturally
+                    // Re-setting causes the infinite loop
+                }
+                else
+                {
+                    // Block has expired or userId not found
+                    // Clean up rate limit and show fresh login
+                    if (!string.IsNullOrEmpty(pendingUserId))
+                        _otpRateLimitService.ResetAttempts(pendingUserId);
+
+                    // ✅ Explicitly clear all TempData block keys
+                    TempData.Remove("IsOtpBlocked");
+                    TempData.Remove("OtpBlockRemainingMinutes");
+                    TempData.Remove("PendingOtpUserId");
+
+                    IsOtpBlocked = false;
+                    Input.RequiresOtp = false;
+                }
+            }
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
             returnUrl ??= Url.Content("~/");
 
-            // ✅ FIX: Clear ModelState for RequiresOtp so Razor uses model value not cached state
+            // Clear ModelState for RequiresOtp so Razor uses model value
             ModelState.Remove("Input.RequiresOtp");
 
-            // ============================================================
-            // Conditionally remove irrelevant validations based on the step
-            // ============================================================
+            // Conditionally remove irrelevant validations per step
             if (!Input.RequiresOtp)
-            {
-                // Step 1: OtpCode not needed yet
                 ModelState.Remove("Input.OtpCode");
-            }
             else
-            {
-                // Step 2: Password not needed again
                 ModelState.Remove("Input.Password");
-            }
 
             if (!ModelState.IsValid)
-            {
                 return Page();
-            }
 
             // ============================================================
             // Step 1: Validate CAPTCHA + Password, then send OTP
@@ -120,7 +159,8 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
                 // Validate CAPTCHA
                 if (!_validatorService.HasRequestValidCaptchaEntry())
                 {
-                    ModelState.AddModelError(string.Empty, "Please enter the security code as a number.");
+                    ModelState.AddModelError(string.Empty,
+                        "Please enter the security code as a number.");
                     return Page();
                 }
 
@@ -144,7 +184,8 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
                         : 0;
 
                     ModelState.AddModelError(string.Empty,
-                        $"Account is locked. Please try again in {Math.Ceiling(remainingTime)} minutes.");
+                        $"Account is locked. Please try again in " +
+                        $"{Math.Ceiling(remainingTime)} minutes.");
                     return Page();
                 }
 
@@ -157,12 +198,15 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
                     var failedCount = await _userManager.GetAccessFailedCountAsync(user);
                     var remainingAttempts = 5 - failedCount;
 
-                    _logger.LogWarning($"Invalid password for user: {user.UserName}. Remaining attempts: {remainingAttempts}");
+                    _logger.LogWarning(
+                        $"Invalid password for user: {user.UserName}. " +
+                        $"Remaining attempts: {remainingAttempts}");
 
                     if (remainingAttempts > 0)
                     {
                         ModelState.AddModelError(string.Empty,
-                            $"Invalid login attempt. You have {remainingAttempts} attempt(s) remaining.");
+                            $"Invalid login attempt. " +
+                            $"You have {remainingAttempts} attempt(s) remaining.");
                     }
                     else
                     {
@@ -173,32 +217,31 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
                     return Page();
                 }
 
-                // Password is valid — generate and send OTP
+                // Password valid — generate and send OTP
                 try
                 {
                     var otp = await _otpService.GenerateOtpAsync(user.Id, "Login");
                     await _emailService.SendOtpEmailAsync(user.Email, otp);
 
-                    _logger.LogInformation($"OTP sent to {user.Email} for user {user.UserName}");
+                    _logger.LogInformation(
+                        $"OTP sent to {user.Email} for user {user.UserName}");
 
-                    // ====================================================
-                    // SECURITY FIX: Store userId in TempData (server-side)
-                    // instead of relying on hidden email field from the form
-                    // ====================================================
                     TempData["PendingOtpUserId"] = user.Id;
 
-                    // Move to OTP step
                     Input.RequiresOtp = true;
                     Input.Password = null;
 
-                    TempData["InfoMessage"] = $"An OTP has been sent to your registered email: {MaskEmail(user.Email)}";
+                    TempData["InfoMessage"] =
+                        $"An OTP has been sent to your registered email: " +
+                        $"{MaskEmail(user.Email)}";
 
                     return Page();
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError($"Failed to send OTP: {ex.Message}");
-                    ModelState.AddModelError(string.Empty, "Failed to send OTP. Please try again.");
+                    ModelState.AddModelError(string.Empty,
+                        "Failed to send OTP. Please try again.");
                     return Page();
                 }
             }
@@ -208,73 +251,119 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
             // ============================================================
             if (Input.RequiresOtp)
             {
-                // SECURITY FIX: Retrieve userId from TempData (server-side)
-                // Never trust the hidden email field from the form for this
                 var pendingUserId = TempData["PendingOtpUserId"]?.ToString();
 
                 if (string.IsNullOrEmpty(pendingUserId))
                 {
-                    // TempData expired or was never set — session issue
-                    _logger.LogWarning("PendingOtpUserId not found in TempData. Possible session expiry or tampering.");
-                    ModelState.AddModelError(string.Empty, "Your session has expired. Please start over.");
-                    Input.RequiresOtp = false;
+                    _logger.LogWarning("PendingOtpUserId not found in TempData.");
+                    ModelState.AddModelError(string.Empty,
+                        "Your session has expired. Please start over.");
+                    Input = new InputModel { RequiresOtp = false };
                     return Page();
                 }
 
-                // Load user securely from database using server-side userId
                 var user = await _userManager.FindByIdAsync(pendingUserId);
 
                 if (user == null)
                 {
-                    _logger.LogWarning($"User not found for PendingOtpUserId: {pendingUserId}");
-                    ModelState.AddModelError(string.Empty, "Invalid session. Please start over.");
-                    Input.RequiresOtp = false;
+                    _logger.LogWarning(
+                        $"User not found for PendingOtpUserId: {pendingUserId}");
+                    ModelState.AddModelError(string.Empty,
+                        "Invalid session. Please start over.");
+                    Input = new InputModel { RequiresOtp = false };
                     return Page();
                 }
 
-                // Check if account got locked between Step 1 and Step 2
+                // Check if account locked between Step 1 and Step 2
                 if (await _userManager.IsLockedOutAsync(user))
                 {
-                    _logger.LogWarning($"User account locked out during OTP step: {user.UserName}");
-                    ModelState.AddModelError(string.Empty, "Account is locked. Please contact support.");
+                    _logger.LogWarning(
+                        $"User locked out during OTP step: {user.UserName}");
+                    ModelState.AddModelError(string.Empty,
+                        "Account is locked. Please contact support.");
                     return Page();
                 }
 
-                // Validate OTP against the server-side userId
+                // Check if OTP attempts are already blocked
+                if (_otpRateLimitService.IsBlocked(pendingUserId))
+                {
+                    var blockedUntil = _otpRateLimitService.GetBlockedUntil(pendingUserId);
+                    var remainingMinutes = blockedUntil.HasValue
+                        ? (int)Math.Ceiling(
+                            (blockedUntil.Value - DateTime.UtcNow).TotalMinutes)
+                        : BLOCK_MINUTES;
+
+                    _logger.LogWarning(
+                        $"Blocked OTP attempt for user: {user.UserName}");
+
+                    TempData["IsOtpBlocked"] = true;
+                    TempData["OtpBlockRemainingMinutes"] = remainingMinutes; // ✅ int
+                    TempData["PendingOtpUserId"] = pendingUserId;
+
+                    return RedirectToPage("./Login");
+                }
+
+                // Validate OTP input not empty
                 if (string.IsNullOrWhiteSpace(Input.OtpCode))
                 {
                     ModelState.AddModelError("Input.OtpCode", "Please enter the OTP.");
-
-                    // Re-set TempData so it persists for the next attempt
-                    TempData["PendingOtpUserId"] = pendingUserId;
-                    return Page();
-                }
-
-                var otpValid = await _otpService.ValidateOtpAsync(user.Id, Input.OtpCode, "Login");
-
-                if (!otpValid)
-                {
-                    _logger.LogWarning($"Invalid OTP attempt for user: {user.UserName}");
-                    ModelState.AddModelError("Input.OtpCode", "Invalid or expired OTP. Please try again.");
-
-                    // Re-set TempData so user can retry OTP without starting over
                     TempData["PendingOtpUserId"] = pendingUserId;
                     Input.RequiresOtp = true;
                     return Page();
                 }
 
-                // OTP valid — sign in the user
-                await _signInManager.SignInAsync(user, isPersistent: Input.RememberMe);
+                // Validate OTP
+                var otpValid = await _otpService.ValidateOtpAsync(
+                    user.Id, Input.OtpCode, "Login");
 
-                // Reset failed access count on successful login
+                if (!otpValid)
+                {
+                    var nowBlocked = _otpRateLimitService.RegisterFailedAttempt(pendingUserId);
+                    var remaining = _otpRateLimitService.GetRemainingAttempts(pendingUserId);
+
+                    _logger.LogWarning(
+                        $"Invalid OTP for user: {user.UserName}. " +
+                        $"Remaining attempts: {remaining}");
+
+                    if (nowBlocked)
+                    {
+                        _logger.LogWarning(
+                            $"User {user.UserName} OTP blocked after max attempts.");
+
+                        TempData["IsOtpBlocked"] = true;
+                        TempData["OtpBlockRemainingMinutes"] = BLOCK_MINUTES; // ✅ int
+                        TempData["PendingOtpUserId"] = pendingUserId;
+
+                        return RedirectToPage("./Login");
+                    }
+                    else
+                    {
+                        TempData.Keep("PendingOtpUserId");
+                        Input.RequiresOtp = true;
+
+                        ModelState.AddModelError("Input.OtpCode",
+                            $"Invalid or expired OTP. {remaining} attempt(s) remaining.");
+
+                        return Page();
+                    }
+                }
+
+                // OTP valid — reset rate limit and sign in
+                _otpRateLimitService.ResetAttempts(pendingUserId);
+
+                TempData.Remove("PendingOtpUserId");
+                TempData.Remove("IsOtpBlocked");
+                TempData.Remove("OtpBlockRemainingMinutes");
+
+                await _signInManager.SignInAsync(user, isPersistent: Input.RememberMe);
                 await _userManager.ResetAccessFailedCountAsync(user);
 
-                _logger.LogInformation($"User {user.UserName} logged in successfully with OTP at {DateTime.UtcNow}");
+                _logger.LogInformation(
+                    $"User {user.UserName} logged in successfully at {DateTime.UtcNow}");
 
                 return LocalRedirect(returnUrl);
             }
 
-            // Fallback
             return Page();
         }
 

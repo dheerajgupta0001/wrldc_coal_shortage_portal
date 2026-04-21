@@ -1,4 +1,5 @@
 ﻿using CoalShortagePortal.Core.Interfaces.Sms;
+using CoalShortagePortal.Infrastructure.Services;
 using CoalShortagePortal.Infrastructure.Services.Email;
 using CoalShortagePortal.Infrastructure.Services.ReportingData;
 using CoalShortagePortal.Infrastructure.Services.Sms;
@@ -27,6 +28,10 @@ namespace CoalShortagePortal.Infrastructure
             SmsConfiguration smsConfig = new SmsConfiguration();
             configuration.Bind("SmsSettings", smsConfig);
             services.AddSingleton(smsConfig);
+
+            // Add this line with your other service registrations
+            services.AddSingleton<IOtpRateLimitService, OtpRateLimitService>();
+            // Singleton because the in-memory dictionary must persist across requests
 
             // Add Infra services
             services.AddTransient<IEmailSender, EmailSender>();

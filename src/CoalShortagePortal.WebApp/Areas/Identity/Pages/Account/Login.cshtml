@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "Log in";
 }
+
 <div class="row justify-content-center align-items-center">
     <div class="col col-md-4 col-lg-4 col-xl-3">
         <section>
@@ -21,23 +22,30 @@
                 }
 
                 <div asp-validation-summary="All" class="text-danger"></div>
-                <input type="hidden" asp-for="Input.RequiresOtp" />
 
                 @if (!Model.Input.RequiresOtp)
                 {
-                    @* Step 1 *@
+                    @* =========================================== *@
+                    @* Step 1: Username/Email, Password & CAPTCHA  *@
+                    @* =========================================== *@
                     <input type="hidden" asp-for="Input.RequiresOtp" />
-                    @* Step 1: Username/Email and Password *@
+
                     <div class="form-group">
                         <label asp-for="Input.Email"></label>
-                        <input asp-for="Input.Email" class="form-control" autocomplete="off" />
+                        <input asp-for="Input.Email"
+                               class="form-control"
+                               autocomplete="off" />
                         <span asp-validation-for="Input.Email" class="text-danger"></span>
                     </div>
+
                     <div class="form-group">
                         <label asp-for="Input.Password"></label>
-                        <input asp-for="Input.Password" class="form-control" autocomplete="off" />
+                        <input asp-for="Input.Password"
+                               class="form-control"
+                               autocomplete="off" />
                         <span asp-validation-for="Input.Password" class="text-danger"></span>
                     </div>
+
                     <div class="form-group">
                         <div class="form-control">
                             <dnt-captcha asp-captcha-generator-max="99"
@@ -58,6 +66,7 @@
                                          asp-use-noise="false" />
                         </div>
                     </div>
+
                     <div class="form-group mt-3">
                         <button type="submit" class="btn btn-primary btn-block">
                             <i class="fas fa-paper-plane"></i> Send OTP
@@ -66,45 +75,100 @@
                 }
                 else
                 {
-                    @* Step 2 - force value to true *@
+                    @* =========================================== *@
+                    @* Step 2: OTP Verification                    *@
+                    @* =========================================== *@
                     <input type="hidden" name="Input.RequiresOtp" value="true" />
-                    @* Step 2: OTP Verification *@
-                    <div class="alert alert-success">
-                        <i class="fas fa-envelope-open-text"></i> OTP sent to your registered email.
-                    </div>
-
                     <input type="hidden" asp-for="Input.Email" />
-                    <input type="hidden" asp-for="Input.Password" value="password-already-verified" />
 
-                    <div class="form-group">
-                        <label asp-for="Input.OtpCode">
-                            <i class="fas fa-key"></i> Enter OTP
-                        </label>
-                        <input asp-for="Input.OtpCode"
-                               class="form-control text-center"
-                               style="font-size: 28px; letter-spacing: 15px; font-weight: bold;"
-                               maxlength="6"
-                               placeholder="000000"
-                               autocomplete="off"
-                               autofocus />
-                        <span asp-validation-for="Input.OtpCode" class="text-danger"></span>
-                        <small class="form-text text-muted mt-2">
-                            <i class="fas fa-clock"></i> OTP is valid for 5 minutes
-                        </small>
+                    <div class="alert alert-success">
+                        <i class="fas fa-envelope-open-text"></i>
+                        OTP sent to your registered email.
                     </div>
 
-                    <div class="form-group mt-3">
-                        <button type="submit" class="btn btn-success btn-block">
-                            <i class="fas fa-sign-in-alt"></i> Verify & Login
-                        </button>
-                    </div>
+                    @if (Model.IsOtpBlocked)
+                    {
+                        @* ======================================= *@
+                        @* BLOCKED STATE                           *@
+                        @* ======================================= *@
+                        <div class="alert alert-danger mt-3">
+                            <i class="fas fa-ban"></i>
+                            <strong>OTP limit exceeded.</strong>
+                            Please wait for <strong>@Model.OtpBlockRemainingMinutes minute(s)</strong>
+                            before trying again.
+                        </div>
 
-                    <div class="form-group">
+                        <div class="form-group">
+                            <label asp-for="Input.OtpCode">
+                                <i class="fas fa-key"></i> Enter OTP
+                            </label>
+                            <input asp-for="Input.OtpCode"
+                                   class="form-control text-center bg-light"
+                                   style="font-size: 28px; letter-spacing: 15px; font-weight: bold;"
+                                   maxlength="6"
+                                   placeholder="------"
+                                   autocomplete="off"
+                                   disabled />
+                            <small class="form-text text-danger mt-2">
+                                <i class="fas fa-lock"></i> OTP entry is temporarily disabled.
+                            </small>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <button type="submit"
+                                    class="btn btn-success btn-block"
+                                    disabled>
+                                <i class="fas fa-ban"></i> Verify & Login (Blocked)
+                            </button>
+                        </div>
+
+                        <div class="alert alert-warning mt-2 text-center"
+                             id="countdown-container">
+                            <i class="fas fa-clock"></i>
+                            Time remaining:
+                            <strong id="countdown-timer">
+                                @(Model.OtpBlockRemainingMinutes * 60)s
+                            </strong>
+                            <br />
+                            <small>You will be redirected to the login page automatically.</small>
+                        </div>
+                    }
+                    else
+                    {
+                        @* ======================================= *@
+                        @* NORMAL OTP STATE                        *@
+                        @* ======================================= *@
+                        <div class="form-group">
+                            <label asp-for="Input.OtpCode">
+                                <i class="fas fa-key"></i> Enter OTP
+                            </label>
+                            <input asp-for="Input.OtpCode"
+                                   class="form-control text-center"
+                                   style="font-size: 28px; letter-spacing: 15px; font-weight: bold;"
+                                   maxlength="6"
+                                   placeholder="000000"
+                                   autocomplete="off"
+                                   autofocus />
+                            <span asp-validation-for="Input.OtpCode" class="text-danger"></span>
+                            <small class="form-text text-muted mt-2">
+                                <i class="fas fa-clock"></i> OTP is valid for 5 minutes
+                            </small>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-success btn-block">
+                                <i class="fas fa-sign-in-alt"></i> Verify & Login
+                            </button>
+                        </div>
+                    }
+
+                    <div class="form-group mt-2">
                         <a asp-page="./Login" class="btn btn-secondary btn-block">
                             <i class="fas fa-arrow-left"></i> Start Over
                         </a>
                     </div>
                 }
+
             </form>
         </section>
     </div>
@@ -113,11 +177,35 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        // Auto-format OTP input - only numbers
-        $(document).ready(function() {
-            $('#Input_OtpCode').on('input', function() {
+        $(document).ready(function () {
+
+            // Only numbers allowed in OTP input
+            $('#Input_OtpCode').on('input', function () {
                 this.value = this.value.replace(/[^0-9]/g, '');
             });
+
+            // Countdown timer when OTP is blocked
+            var countdownEl = document.getElementById('countdown-timer');
+            if (countdownEl) {
+                var seconds = parseInt(countdownEl.innerText.replace('s', ''));
+
+                var interval = setInterval(function () {
+                    seconds--;
+                    if (seconds <= 0) {
+                        clearInterval(interval);
+                        countdownEl.innerText = '0s';
+
+                        // Redirect to Login page (Step 1) after block expires
+                        window.location.href = '/Identity/Account/Login';
+                    } else {
+                        var mins = Math.floor(seconds / 60);
+                        var secs = seconds % 60;
+                        countdownEl.innerText = mins > 0
+                            ? mins + 'm ' + secs + 's'
+                            : secs + 's';
+                    }
+                }, 1000);
+            }
         });
     </script>
 }
