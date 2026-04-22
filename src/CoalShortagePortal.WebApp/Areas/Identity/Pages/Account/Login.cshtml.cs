@@ -195,24 +195,44 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
                 {
                     await _userManager.AccessFailedAsync(user);
 
+                    // ✅ NOW check if locked out AFTER incrementing
+                    if (await _userManager.IsLockedOutAsync(user))
+                    {
+                        _logger.LogWarning($"User account locked out: {user.UserName}");
+                        var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
+                        var remainingTime = lockoutEnd.HasValue
+                            ? (lockoutEnd.Value - DateTimeOffset.UtcNow).TotalMinutes
+                            : 0;
+
+                        //_logger.LogWarning($"User {user.UserName} locked out after failed attempt.");
+
+                        ModelState.AddModelError(string.Empty,
+                            $"Account is locked. Please try again in " +
+                            $"{Math.Ceiling(remainingTime)} minutes.");
+                        return Page();
+                    }
+
+                    // ✅ Get count AFTER AccessFailedAsync for accurate number
                     var failedCount = await _userManager.GetAccessFailedCountAsync(user);
-                    var remainingAttempts = 5 - failedCount;
+                    var maxAttempts = _userManager.Options.Lockout.MaxFailedAccessAttempts; // reads from Startup.cs (5)
+                    var remainingAttempts = maxAttempts - failedCount;
 
                     _logger.LogWarning(
                         $"Invalid password for user: {user.UserName}. " +
+                        $"Failed: {failedCount}/{maxAttempts}. " +
                         $"Remaining attempts: {remainingAttempts}");
 
-                    if (remainingAttempts > 0)
-                    {
-                        ModelState.AddModelError(string.Empty,
-                            $"Invalid login attempt. " +
-                            $"You have {remainingAttempts} attempt(s) remaining.");
-                    }
-                    else
-                    {
-                        ModelState.AddModelError(string.Empty,
-                            "Account has been locked due to multiple failed attempts.");
-                    }
+                    //if (remainingAttempts > 0)
+                    //{
+                    ModelState.AddModelError(string.Empty,
+                        $"Invalid login attempt. " +
+                        $"You have {remainingAttempts} attempt(s) remaining.");
+                    //}
+                    //else
+                    //{
+                    //    ModelState.AddModelError(string.Empty,
+                    //        "Account has been locked due to multiple failed attempts.");
+                    //}
 
                     return Page();
                 }

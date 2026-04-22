@@ -177,35 +177,66 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        $(document).ready(function () {
+
+        // ✅ Get correct login URL dynamically — works in both VS and IIS subfolder
+        var loginUrl = '@Url.Page("/Account/Login")';
+
+        // ✅ window.onload fires after ALL resources loaded
+        // Works consistently in both IIS and VS — no jQuery dependency
+        window.onload = function () {
 
             // Only numbers allowed in OTP input
-            $('#Input_OtpCode').on('input', function () {
-                this.value = this.value.replace(/[^0-9]/g, '');
-            });
+            var otpInput = document.getElementById('Input_OtpCode');
+            if (otpInput) {
+                otpInput.addEventListener('input', function () {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+            }
 
             // Countdown timer when OTP is blocked
             var countdownEl = document.getElementById('countdown-timer');
             if (countdownEl) {
-                var seconds = parseInt(countdownEl.innerText.replace('s', ''));
 
+                // ✅ Read raw text, trim all whitespace
+                var rawText = countdownEl.textContent.trim();
+
+                // ✅ Remove 's' suffix and parse to integer
+                var seconds = parseInt(rawText.replace('s', '').trim(), 10);
+
+                // ✅ Validate before starting timer
+                if (isNaN(seconds) || seconds <= 0) {
+                    // window.location.href = '/Identity/Account/Login';
+                    window.location.href = loginUrl;
+                    return;
+                }
+
+                // ✅ Update display immediately so user sees
+                // formatted time (e.g. "5m 0s") not raw "300s"
+                var updateDisplay = function (sec) {
+                    var m = Math.floor(sec / 60);
+                    var s = sec % 60;
+                    countdownEl.textContent = m > 0
+                        ? m + 'm ' + s + 's'
+                        : s + 's';
+                };
+
+                // Show formatted time immediately on load
+                updateDisplay(seconds);
+
+                // Start countdown interval
                 var interval = setInterval(function () {
                     seconds--;
                     if (seconds <= 0) {
                         clearInterval(interval);
-                        countdownEl.innerText = '0s';
-
-                        // Redirect to Login page (Step 1) after block expires
-                        window.location.href = '/Identity/Account/Login';
+                        countdownEl.textContent = '0s';
+                        // ✅ Redirect to Login page (Step 1) after block expires
+                        window.location.href = loginUrl;
                     } else {
-                        var mins = Math.floor(seconds / 60);
-                        var secs = seconds % 60;
-                        countdownEl.innerText = mins > 0
-                            ? mins + 'm ' + secs + 's'
-                            : secs + 's';
+                        updateDisplay(seconds);
                     }
                 }, 1000);
             }
-        });
+        };
     </script>
+
 }
