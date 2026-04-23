@@ -2,6 +2,7 @@
 @model CoalShortagePortal.WebApp.Pages.GenMUs.EditModel
 @{
     ViewData["Title"] = "Edit Daily MUs";
+    var isScheduleStation = Model.StationUserType == "ISGS" || Model.StationUserType == "IPP";
 }
 
 <div class="container-fluid mt-4">
@@ -62,7 +63,12 @@
                     {
                         <div class="alert alert-info mb-3">
                             <strong><i class="fas fa-info-circle"></i> Original Record:</strong><br>
-                            Station: <strong>@Model.SelectedRecord?.StationName</strong><br>
+                            Station: <strong>@Model.SelectedRecord?.StationName</strong>
+                            @if (!string.IsNullOrEmpty(Model.StationUserType))
+                            {
+                                <span class="badge badge-primary ml-1">@Model.StationUserType</span>
+                            }
+                            <br>
                             Date: <strong>@Model.SelectedRecord?.DataDate.ToString("yyyy-MM-dd")</strong><br>
                             MUs: <strong>@Model.SelectedRecord?.DailyMUs.ToString("N2")</strong><br>
                             ExBus: <strong>@Model.SelectedRecord?.ExBus.ToString("N2")</strong>
@@ -95,11 +101,23 @@
 
                             <div class="form-group">
                                 <label asp-for="DailyMUs" class="font-weight-bold">
-                                    <i class="fas fa-chart-line text-success"></i> Daily MUs
+                                    <i class="fas fa-chart-line text-success"></i> Gross
                                 </label>
-                                <input asp-for="DailyMUs" class="form-control form-control-lg" type="number" step="0.01" min="0.01" placeholder="Enter MU value" />
+                                <input asp-for="DailyMUs" class="form-control form-control-lg" type="number" step="0.01" min="0.01" placeholder="Enter Gross MU value" />
                                 <span asp-validation-for="DailyMUs" class="text-danger small"></span>
                             </div>
+
+                            @* Schedule MUs — only shown for ISGS / IPP stations *@
+                            @if (isScheduleStation)
+                            {
+                                <div class="form-group">
+                                    <label asp-for="ScheduleMUs" class="font-weight-bold">
+                                        <i class="fas fa-chart-line text-success"></i> Schedule
+                                    </label>
+                                    <input asp-for="ScheduleMUs" class="form-control form-control-lg" type="number" step="0.01" min="0.01" placeholder="Enter Schedule MU value" />
+                                    <span asp-validation-for="ScheduleMUs" class="text-danger small"></span>
+                                </div>
+                            }
 
                             <div class="form-group">
                                 <label asp-for="ExBus" class="font-weight-bold">

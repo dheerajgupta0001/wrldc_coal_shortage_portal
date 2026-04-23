@@ -27,8 +27,14 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         [Required]
         [BindProperty]
         [Display(Name = "Daily MUs")]
-        [Range(0.01, float.MaxValue, ErrorMessage = "Daily MUs must be greater than 0")]
+        [Range(0.01, float.MaxValue, ErrorMessage = "Gross must be greater than 0")]
         public float DailyMUs { get; set; }
+
+        [Required]
+        [BindProperty]
+        [Display(Name = "Schedule MUs")]
+        [Range(0.01, float.MaxValue, ErrorMessage = "Schedule must be greater than 0")]
+        public float ScheduleMUs { get; set; }
 
         [BindProperty]
         [Display(Name = "ExBus")]
@@ -89,6 +95,9 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         [Required]
         public string StationName { get; set; }
 
+        // Holds the current user's type fetched from UserDetails
+        public string CurrentUserType { get; set; }
+
         public GenDataDTO GenData { get; set; }
         public UserListVM UserList { get; set; }
 
@@ -111,6 +120,8 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             OffPeakMWTime = new TimeSpan(3, 0, 0); // 03:00 hrs
             // Default Time set to 19 & 3
 
+            // Fetch current user's type
+            await LoadCurrentUserTypeAsync();
 
             var query = _context.DailyMUsDatas.AsQueryable();
 
@@ -127,6 +138,17 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
         public async Task<IActionResult> OnPostAsync()
         {
+            // Fetch user type first (needed for validation logic)
+            await LoadCurrentUserTypeAsync();
+
+            // If user is NOT ISGS/IPP, clear ScheduleMUs validation
+            bool isScheduleUser = CurrentUserType == "ISGS" || CurrentUserType == "IPP";
+            if (!isScheduleUser)
+            {
+                ModelState.Remove("ScheduleMUs");
+                ScheduleMUs = 0;
+            }
+
             if (!ModelState.IsValid)
             {
                 // Reload the list if validation fails
@@ -153,6 +175,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 //DataDate = DataDate.ToUniversalTime(),
                 DataDate = DateTime.SpecifyKind(DataDate.Date, DateTimeKind.Utc),
                 DailyMUs = DailyMUs,
+                ScheduleMUs = isScheduleUser ? ScheduleMUs : 0,
                 ExBus = ExBus,
                 PeakMW = PeakMW,
                 PeakMWTime = PeakMWTime,
@@ -192,9 +215,34 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 return Page();
             }
         }
+        private async Task LoadCurrentUserTypeAsync()
+        {
+            // Step 1: Get the AspNetUsers.Id (GUID) for the currently logged-in username
+            var aspNetUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserName == User.Identity.Name);
+
+            if (aspNetUser == null)
+            {
+                CurrentUserType = "";
+                return;
+            }
+
+            // Step 2: Use that GUID to find the matching UserDetails row
+            var userDetail = await _context.UserDetails
+                .FirstOrDefaultAsync(u => u.UserId == aspNetUser.Id);
+
+            CurrentUserType = userDetail?.UserType ?? "";
+        }
+
         // Helper method to avoid code duplication
         private async Task LoadDataListAsync()
         {
+            // Re-load user type if not already set
+            if (string.IsNullOrEmpty(CurrentUserType))
+            {
+                await LoadCurrentUserTypeAsync();
+            }
+
             var query = _context.DailyMUsDatas.AsQueryable();
 
             if (User.Identity.Name?.ToLower() != "admin")

@@ -31,8 +31,13 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         [Required]
         [BindProperty]
         [Display(Name = "Daily MUs")]
-        [Range(0.01, float.MaxValue, ErrorMessage = "Daily MUs must be greater than 0")]
+        [Range(0.01, float.MaxValue, ErrorMessage = "Daily must be greater than 0")]
         public float DailyMUs { get; set; }
+
+        [BindProperty]
+        [Display(Name = "Schedule MUs")]
+        [Range(0.01, float.MaxValue, ErrorMessage = "Schedule must be greater than 0")]
+        public float ScheduleMUs { get; set; }
 
         [Required]
         [BindProperty]
@@ -91,13 +96,15 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         [BindProperty]
         public string StationName { get; set; }
 
+        // Holds the UserType of the station being edited
+        public string StationUserType { get; set; }
+
         public List<SelectListItem> StationList { get; set; }
         public List<DailyMUsData> AvailableRecords { get; set; }
         public DailyMUsData SelectedRecord { get; set; }
 
         public async Task<IActionResult> OnGetAsync(int? id)
         {
-            // Check if user is admin
             if (User.Identity.Name?.ToLower() != "admin")
             {
                 TempData["ErrorMessage"] = "Access denied. Only administrators can edit records.";
@@ -119,6 +126,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 SelectedId = record.Id;
                 DataDate = record.DataDate;
                 DailyMUs = record.DailyMUs;
+                ScheduleMUs = record.ScheduleMUs;
                 ExBus = record.ExBus;
                 PeakMW = record.PeakMW;
                 PeakMWTime = record.PeakMWTime;
@@ -130,6 +138,9 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 MinGenerationTime = record.MinGenerationTime;
                 StationName = record.StationName;
                 SelectedRecord = record;
+
+                // Load the UserType for this station
+                await LoadStationUserTypeAsync(record.StationName);
             }
             else
             {
@@ -141,7 +152,6 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
         public async Task<IActionResult> OnPostSaveAsync()
         {
-            // Check if user is admin
             if (User.Identity.Name?.ToLower() != "admin")
             {
                 TempData["ErrorMessage"] = "Access denied. Only administrators can edit records.";
@@ -156,7 +166,17 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 return Page();
             }
 
-            // Validate all fields
+            // Load station user type to decide whether ScheduleMUs is required
+            await LoadStationUserTypeAsync(StationName);
+            bool isScheduleStation = StationUserType == "ISGS" || StationUserType == "IPP";
+
+            // Remove ScheduleMUs validation if station is not ISGS/IPP
+            if (!isScheduleStation)
+            {
+                ModelState.Remove("ScheduleMUs");
+                ScheduleMUs = 0;
+            }
+
             if (DailyMUs <= 0 || ExBus <= 0 || PeakMW <= 0 || OffPeakMW <= 0 || DayPeakMW <= 0 || MinGeneration <= 0)
             {
                 ModelState.AddModelError("", "All MW and MU values must be greater than 0.");
@@ -183,8 +203,8 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
             try
             {
-                // Update all editable fields - keep Date and Station unchanged
                 recordToUpdate.DailyMUs = DailyMUs;
+                recordToUpdate.ScheduleMUs = isScheduleStation ? ScheduleMUs : 0;
                 recordToUpdate.ExBus = ExBus;
                 recordToUpdate.PeakMW = PeakMW;
                 recordToUpdate.PeakMWTime = PeakMWTime;
@@ -198,7 +218,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = $"Record updated successfully for <strong>{recordToUpdate.StationName}</strong> on {recordToUpdate.DataDate.ToString("yyyy-MM-dd")}!";
+                TempData["SuccessMessage"] = $"Record updated successfully for <strong>{recordToUpdate.StationName}</strong> on {recordToUpdate.DataDate:yyyy-MM-dd}!";
                 return RedirectToPage("./Edit");
             }
             catch (DbUpdateException)
@@ -215,7 +235,6 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
         public async Task<IActionResult> OnPostDeleteAsync()
         {
-            // Check if user is admin
             if (User.Identity.Name?.ToLower() != "admin")
             {
                 TempData["ErrorMessage"] = "Access denied. Only administrators can delete records.";
@@ -233,7 +252,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             {
                 _context.DailyMUsDatas.Remove(record);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Record for <strong>{record.StationName}</strong> on {record.DataDate.ToString("yyyy-MM-dd")} deleted successfully!";
+                TempData["SuccessMessage"] = $"Record for <strong>{record.StationName}</strong> on {record.DataDate:yyyy-MM-dd} deleted successfully!";
             }
             else
             {
@@ -241,6 +260,34 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             }
 
             return RedirectToPage("./Edit");
+        }
+
+        /// <summary>
+        /// Looks up AspNetUsers by StationName (username), then finds their UserType in UserDetails.
+        /// </summary>
+        private async Task LoadStationUserTypeAsync(string stationName)
+        {
+            if (string.IsNullOrEmpty(stationName))
+            {
+                StationUserType = "";
+                return;
+            }
+
+            // Step 1: Find the AspNetUsers.Id (GUID) for this station's username
+            var aspNetUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserName == stationName);
+
+            if (aspNetUser == null)
+            {
+                StationUserType = "";
+                return;
+            }
+
+            // Step 2: Match that GUID to UserDetails.UserId
+            var userDetail = await _context.UserDetails
+                .FirstOrDefaultAsync(u => u.UserId == aspNetUser.Id);
+
+            StationUserType = userDetail?.UserType ?? "";
         }
 
         private async Task LoadStationListAsync()

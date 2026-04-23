@@ -40,6 +40,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             public string Email { get; set; }
             public bool HasSubmitted { get; set; }
             public float? ExistingMUs { get; set; }
+            public float? ExistingScheduleMUs { get; set; }
             public float? ExistingExBus { get; set; }
             public int? ExistingPeakMW { get; set; }
             public TimeSpan? ExistingPeakMWTime { get; set; }
@@ -55,8 +56,11 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         {
             public string StationName { get; set; }
 
-            [Range(0.01, double.MaxValue, ErrorMessage = "Daily MUs must be greater than 0")]
+            [Range(0.01, double.MaxValue, ErrorMessage = "Gross must be greater than 0")]
             public float? DailyMUs { get; set; }
+
+            [Range(0.01, double.MaxValue, ErrorMessage = "Schedule must be greater than 0")]
+            public float? ScheduleMUs { get; set; }
 
             [Range(0.01, double.MaxValue, ErrorMessage = "ExBus must be greater than 0")]
             public float? ExBus { get; set; }
@@ -120,6 +124,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                     Email = user.Email,
                     HasSubmitted = submission != null,
                     ExistingMUs = submission?.DailyMUs,
+                    ExistingScheduleMUs = submission?.ScheduleMUs,
                     ExistingExBus = submission?.ExBus,
                     ExistingPeakMW = submission?.PeakMW,
                     ExistingPeakMWTime = submission?.PeakMWTime,
@@ -198,6 +203,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                     {
                         DataDate = DateTime.SpecifyKind(YesterdayDate, DateTimeKind.Utc),
                         DailyMUs = entry.DailyMUs.Value,
+                        ScheduleMUs = entry.ScheduleMUs.Value,
                         ExBus = entry.ExBus.Value,
                         PeakMW = entry.PeakMW.Value,
 
