@@ -5,6 +5,13 @@
 
 @if (SignInManager.IsSignedIn(User))
 {
+
+    <li class="nav-item">
+        <a class="nav-link" asp-page="/GenMUs/Index">
+            <i class="fas fa-calendar-check nav-icon"></i>Daily MUs
+        </a>
+    </li>
+
     if (User.IsInRole(SecurityConstants.AdminRoleString))
     {
         <!-- ===== ADMIN LINKS ===== -->
@@ -88,11 +95,6 @@
     <li class="nav-item">
         <a class="nav-link" asp-page="/UnrevGens/Index">
             <i class="fas fa-sync-alt nav-icon"></i>Expected Revival
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" asp-page="/GenMUs/Index">
-            <i class="fas fa-calendar-check nav-icon"></i>Daily MUs
         </a>
     </li>
 

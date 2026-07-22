@@ -5,6 +5,9 @@
     var pendingCount = Model.PendingGenerators?.Count(p => !p.HasSubmitted) ?? 0;
     var submittedCount = Model.PendingGenerators?.Count(p => p.HasSubmitted) ?? 0;
     var allSubmitted = pendingCount == 0 && (Model.PendingGenerators?.Any() ?? false);
+    var editingStations = Model.EditingStations ?? new List<string>();
+    var editCount = Model.MUEntries?.Count(e => e.IsEditMode) ?? 0;
+    var showSaveButton = pendingCount > 0 || editCount > 0;
 }
 
 <div class="container-fluid mt-4">
@@ -15,10 +18,12 @@
                     <i class="fas fa-clock text-warning"></i> Pending MUs for Yesterday
                 </h2>
                 <div>
-                    <span class="badge badge-lg badge-warning mr-2 blink-badge" style="font-size: 1rem; padding: 0.5rem 1rem;  color: #B5051C;">
+                    <span class="badge badge-lg badge-warning mr-2 blink-badge"
+                          style="font-size:1rem; padding:0.5rem 1rem; color:#B5051C;">
                         <i class="fas fa-exclamation-circle"></i> Pending: @pendingCount
                     </span>
-                    <span class="badge badge-lg badge-success" style="font-size: 1rem; padding: 0.5rem 1rem; color: #069E3E;">
+                    <span class="badge badge-lg badge-success"
+                          style="font-size:1rem; padding:0.5rem 1rem; color:#069E3E;">
                         <i class="fas fa-check-circle"></i> Submitted: @submittedCount
                     </span>
                 </div>
@@ -32,7 +37,12 @@
                 <i class="fas fa-info-circle"></i>
                 <span class="ml-3">
                     <i class="fas fa-lightbulb"></i>
-                    Enter <strong> MU &amp; ExBus, ExBus, Peak MW, and Time </strong> values for generators who haven't submitted yet for <strong> @Model.YesterdayDate.ToString("dddd, MMMM dd, yyyy") </strong>
+                    Enter <strong>MU &amp; ExBus, Peak MW, and Time</strong> values
+                    for generators who haven't submitted yet for
+                    <strong>@Model.YesterdayDate.ToString("dddd, MMMM dd, yyyy")</strong>.
+                    Schedule MUs are only required for
+                    <span class="badge badge-primary">ISGS</span> and
+                    <span class="badge badge-primary">IPP</span> stations.
                 </span>
             </div>
         </div>
@@ -42,11 +52,14 @@
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="row justify-content-center">
-            <div class="col-lg-10 col-xl-10">
+            <div class="col-lg-10">
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle"></i> <strong>Success!</strong> @Html.Raw(TempData["SuccessMessage"])
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
+                    <i class="fas fa-check-circle"></i>
+                    <strong>Success!</strong>
+                    @* ✅ Encode output — no Html.Raw for user-influenced messages *@
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="close" data-dismiss="alert">
+                        <span>&times;</span>
                     </button>
                 </div>
             </div>
@@ -57,16 +70,21 @@
     @if (TempData["ErrorMessage"] != null)
     {
         <div class="row justify-content-center">
-            <div class="col-lg-10 col-xl-10">
+            <div class="col-lg-10">
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-circle"></i> <strong>Error!</strong> @Html.Raw(TempData["ErrorMessage"])
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Error!</strong>
+                    @* ✅ Use Html.Raw only for server-generated messages with line breaks *@
+                    @Html.Raw(System.Net.WebUtility.HtmlEncode(
+                    TempData["ErrorMessage"]?.ToString() ?? "")
+                                .Replace("&lt;br/&gt;", "<br/>"))
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
             </div>
         </div>
-    }
+    </div>
+        }
 
     <div class="row justify-content-md-center">
         <div class="col-10">
@@ -77,122 +95,204 @@
                     </h5>
                 </div>
                 <div class="card-body p-0">
+
+                    @* ── Main data-entry form ── *@
                     <form method="post">
-                        <div class="table-responsive">
+                        @* @Html.AntiForgeryToken() *@
+                        <div class="">
                             <table class="table table-hover mb-0">
                                 <thead class="thead-dark">
                                     <tr>
-                                        <th style="width: 5%;">#</th>
-                                        <th style="width: 20%;">
-                                            <i class="fas fa-building"></i> GENERATOR STATION
+                                        <th style="width:3%;">#</th>
+                                        <th style="width:13%;">
+                                            <i class="fas fa-building"></i> STATION
                                         </th>
-                                        <th style="width: 20%;">
+                                        <th style="width:13%;">
                                             <i class="fas fa-envelope"></i> EMAIL
                                         </th>
-                                        <th style="width: 12%;" class="text-center">
+                                        <th style="width:8%;" class="text-center">
                                             <i class="fas fa-check"></i> STATUS
                                         </th>
-                                        <th style="width: 15%;" class="text-center">
+                                        <th style="width:9%;" class="text-center">
                                             <i class="fas fa-bolt"></i> DAILY
                                         </th>
-                                        <th style="width: 15%;" class="text-center">
+                                        <th style="width:9%;" class="text-center">
                                             <i class="fas fa-bolt"></i> SCHEDULE
+                                            <br />
+                                            <small style="font-size:0.62rem; opacity:0.85;">
+                                                ISGS/IPP Only
+                                            </small>
                                         </th>
-                                        <th style="width: 15%;" class="text-center">
+                                        <th style="width:9%;" class="text-center">
                                             <i class="fas fa-plug"></i> ExBus
                                         </th>
-                                        <th style="width: 10%;" class="text-center">
+                                        <th style="width:9%;" class="text-center">
                                             <i class="fas fa-arrow-up"></i> PEAK MW
                                         </th>
-                                        <th style="width: 10%;" class="text-center">
+                                        <th style="width:9%;" class="text-center">
                                             <i class="fas fa-arrow-down"></i> OFF PEAK
                                         </th>
-                                        <th style="width: 10%;" class="text-center">
+                                        <th style="width:9%;" class="text-center">
                                             <i class="fas fa-sun"></i> DAY PEAK
                                         </th>
-                                        <th style="width: 10%;" class="text-center">
+                                        <th style="width:9%;" class="text-center">
                                             <i class="fas fa-chart-line"></i> MIN GEN
                                         </th>
-                                        <th style="width: 8%;" class="text-center">
+                                        <th style="width:8%;" class="text-center">
                                             <i class="fas fa-cog"></i> ACTION
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @if (Model.PendingGenerators != null && Model.PendingGenerators.Any())
+                                    @if (Model.PendingGenerators != null
+                                                                        && Model.PendingGenerators.Any())
                                     {
                                         var index = 0;
                                         var entryIndex = 0;
+
                                         @foreach (var generator in Model.PendingGenerators)
                                         {
-                                            <tr class="@(generator.HasSubmitted ? "table-success" : "table-warning")">
-                                                <td class="align-middle font-weight-bold">@(++index)</td>
+                                            bool isEditing =
+                                            editingStations.Contains(
+                                            generator.StationName);
+                                            var entry = Model.MUEntries?
+                                            .ElementAtOrDefault(entryIndex);
+                                            bool hasEntry =
+                                            (!generator.HasSubmitted || isEditing)
+                                            && entry != null;
+
+                                            <tr class="@(generator.HasSubmitted
+                                                                                                ? (isEditing ? "table-edit" : "table-success")
+                                                                                                : "table-warning")">
+
+                                                <td class="align-middle font-weight-bold">
+                                                    @(++index)
+                                                </td>
+
                                                 <td class="align-middle">
-                                                    <strong style="color: #2c3e50;">
+                                                    <strong style="color:#2c3e50;">
                                                         <i class="fas fa-industry text-primary"></i>
                                                         @generator.StationName
                                                     </strong>
+                                                    @if (!string.IsNullOrEmpty(generator.UserType))
+                                                    {
+                                                        <br />
+                                                        <span class="badge @(generator.IsScheduleUser
+                                                                                                                          ? "badge-usertype-schedule"
+                                                                                                                          : "badge-usertype-other")"
+                                                              style="font-size:0.65rem; border-radius:4px;">
+                                                            @generator.UserType
+                                                        </span>
+                                                    }
                                                 </td>
+
                                                 <td class="align-middle">
-                                                    <small style="color: #0E3747;">@generator.Email</small>
+                                                    <small style="color:#0E3747;">
+                                                        @generator.Email
+                                                    </small>
                                                 </td>
+
                                                 <td class="align-middle text-center">
                                                     @if (generator.HasSubmitted)
                                                     {
-                                                        <span class="badge badge-success badge-pill px-3 py-2 text-dark">
-                                                            <i class="fas fa-check-circle"></i><strong> Submitted</strong>
-                                                        </span>
+                                                        @if (isEditing)
+                                                        {
+                                                            <span class="badge badge-warning badge-pill px-3 py-2 text-dark">
+                                                                <i class="fas fa-pencil-alt"></i>
+                                                                <strong> Editing</strong>
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge badge-success badge-pill px-3 py-2 text-dark">
+                                                                <i class="fas fa-check-circle"></i>
+                                                                <strong> Submitted</strong>
+                                                            </span>
+                                                        }
                                                     }
                                                     else
                                                     {
                                                         <span class="badge badge-danger badge-pill px-3 py-2 text-dark">
-                                                            <i class="fas fa-times-circle"></i><strong> Pending</strong>
+                                                            <i class="fas fa-times-circle"></i>
+                                                            <strong> Pending</strong>
                                                         </span>
                                                     }
                                                 </td>
+
+                                                @* ── DAILY MUs ── *@
                                                 <td class="align-middle text-center">
-                                                    @if (generator.HasSubmitted)
+                                                    @if (generator.HasSubmitted && !isEditing)
                                                     {
-                                                        <span class="badge badge-info text-white px-3 py-2" style="font-size: 1rem; font-weight: 600;">
+                                                        <span class="val-badge val-daily">
                                                             @generator.ExistingMUs?.ToString("N2")
                                                         </span>
                                                     }
                                                     else
                                                     {
-                                                        <input type="hidden" name="MUEntries[@(entryIndex)].StationName" value="@generator.StationName" />
+                                                        <input type="hidden"
+                                                               name="MUEntries[@(entryIndex)].StationName"
+                                                               value="@generator.StationName" />
+                                                        <input type="hidden"
+                                                               name="MUEntries[@(entryIndex)].UserType"
+                                                               value="@generator.UserType" />
+                                                        <input type="hidden"
+                                                               name="MUEntries[@(entryIndex)].IsEditMode"
+                                                               value="@isEditing.ToString().ToLower()" />
                                                         <input type="number"
                                                                name="MUEntries[@(entryIndex)].DailyMUs"
-                                                               class="form-control form-control-sm"
-                                                               step="0.01"
-                                                               min="0.01"
-                                                               placeholder="Enter MUs"
-                                                               style="max-width: 150px; margin: 0 auto;" />
-                                                        <span class="text-danger field-validation-valid" data-valmsg-for="MUEntries[@(entryIndex)].DailyMUs" data-valmsg-replace="true"></span>
+                                                               class="form-control form-control-sm @(isEditing ? "input-edit" : "")"
+                                                               step="0.01" min="0.01" max="99999.99"
+                                                               value="@(isEditing? entry?.DailyMUs?.ToString() : "")"
+                                                               placeholder="MUs"
+                                                               style="max-width:130px; margin:0 auto;" />
                                                     }
                                                 </td>
+
+                                                @* ── SCHEDULE MUs ── *@
                                                 <td class="align-middle text-center">
-                                                    @if (generator.HasSubmitted)
+                                                    @if (generator.HasSubmitted && !isEditing)
                                                     {
-                                                        <span class="badge badge-info text-white px-3 py-2" style="font-size: 1rem; font-weight: 600;">
-                                                            @generator.ExistingScheduleMUs?.ToString("N2")
-                                                        </span>
+                                                        @if (generator.IsScheduleUser)
+                                                        {
+                                                            <span class="val-badge val-schedule">
+                                                                @generator.ExistingScheduleMUs?.ToString("N2")
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">
+                                                                <i class="fas fa-minus"></i>
+                                                            </span>
+                                                        }
                                                     }
                                                     else
                                                     {
-                                                        <input type="number"
-                                                               name="MUEntries[@(entryIndex)].ScheduleMUs"
-                                                               class="form-control form-control-sm"
-                                                               step="0.01"
-                                                               min="0.01"
-                                                               placeholder="Enter Schedule MUs"
-                                                               style="max-width: 150px; margin: 0 auto;" />
-                                                        <span class="text-danger field-validation-valid" data-valmsg-for="MUEntries[@(entryIndex)].ScheduleMUs" data-valmsg-replace="true"></span>
+                                                        @if (generator.IsScheduleUser)
+                                                        {
+                                                            <input type="number"
+                                                                   name="MUEntries[@(entryIndex)].ScheduleMUs"
+                                                                   class="form-control form-control-sm @(isEditing ? "input-edit" : "")"
+                                                                   step="0.01" min="0.01" max="99999.99"
+                                                                   value="@(isEditing? entry?.ScheduleMUs?.ToString() : "")"
+                                                                   placeholder="Sched MUs"
+                                                                   style="max-width:130px; margin:0 auto;" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge badge-secondary text-white px-2 py-1"
+                                                                  style="font-size:0.75rem;"
+                                                                  title="Not applicable for this station type">
+                                                                N/A
+                                                            </span>
+                                                        }
                                                     }
                                                 </td>
+
+                                                @* ── ExBus ── *@
                                                 <td class="align-middle text-center">
-                                                    @if (generator.HasSubmitted)
+                                                    @if (generator.HasSubmitted && !isEditing)
                                                     {
-                                                        <span class="badge badge-secondary text-white px-3 py-2" style="font-size: 1rem; font-weight: 600;">
+                                                        <span class="val-badge val-exbus">
                                                             @generator.ExistingExBus?.ToString("N2")
                                                         </span>
                                                     }
@@ -200,133 +300,164 @@
                                                     {
                                                         <input type="number"
                                                                name="MUEntries[@(entryIndex)].ExBus"
-                                                               class="form-control form-control-sm"
-                                                               step="0.01"
-                                                               min="0.01"
-                                                               placeholder="Enter ExBus"
-                                                               style="max-width: 150px; margin: 0 auto;" />
-                                                        <span class="text-danger field-validation-valid" data-valmsg-for="MUEntries[@(entryIndex)].ExBus" data-valmsg-replace="true"></span>
+                                                               class="form-control form-control-sm @(isEditing ? "input-edit" : "")"
+                                                               step="0.01" min="0.01" max="99999.99"
+                                                               value="@(isEditing? entry?.ExBus?.ToString() : "")"
+                                                               placeholder="ExBus"
+                                                               style="max-width:130px; margin:0 auto;" />
                                                     }
                                                 </td>
-                                                @* PeakMW OffPeakMW DayPeak MinGeneration *@
+
+                                                @* ── PEAK MW ── *@
                                                 <td class="align-middle text-center">
-                                                    @if (generator.HasSubmitted)
+                                                    @if (generator.HasSubmitted && !isEditing)
                                                     {
                                                         <div>
-                                                            <span class="badge badge-primary text-white px-2 py-1" style="font-size: 0.85rem;">
+                                                            <span class="val-badge val-peak">
                                                                 @generator.ExistingPeakMW MW
                                                             </span>
-                                                            <br />
-                                                            <small class="text-muted" style="font-size: 0.7rem;">@generator.ExistingPeakMWTime?.ToString(@"hh\:mm")</small>
+                                                            <small class="time-label">
+                                                                @generator.ExistingPeakMWTime?.ToString(@"hh\:mm")
+                                                            </small>
                                                         </div>
                                                     }
                                                     else
                                                     {
                                                         <input type="number"
                                                                name="MUEntries[@(entryIndex)].PeakMW"
-                                                               class="form-control form-control-sm mb-1"
-                                                               step="1"
-                                                               min="1"
+                                                               class="form-control form-control-sm mb-1 @(isEditing ? "input-edit" : "")"
+                                                               step="1" min="1" max="99999"
+                                                               value="@(isEditing? entry?.PeakMW?.ToString() : "")"
                                                                placeholder="MW"
-                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                               style="max-width:110px; margin:0 auto;" />
                                                         <input type="time"
                                                                name="MUEntries[@(entryIndex)].PeakMWTime"
-                                                               class="form-control form-control-sm"
-                                                               value="@(Model.MUEntries[entryIndex].PeakMWTime?.ToString(@"hh\:mm") ?? "19:00")" />
+                                                               class="form-control form-control-sm @(isEditing ? "input-edit" : "")"
+                                                               value="@(entry?.PeakMWTime?.ToString(@"hh\:mm") ?? "19:00")"
+                                                               style="max-width:110px; margin:0 auto;" />
                                                     }
                                                 </td>
+
+                                                @* ── OFF PEAK MW ── *@
                                                 <td class="align-middle text-center">
-                                                    @if (generator.HasSubmitted)
+                                                    @if (generator.HasSubmitted && !isEditing)
                                                     {
                                                         <div>
-                                                            <span class="badge badge-dark text-white px-2 py-1" style="font-size: 0.85rem;">
+                                                            <span class="val-badge val-offpeak">
                                                                 @generator.ExistingOffPeakMW MW
                                                             </span>
-                                                            <br />
-                                                            <small class="text-muted" style="font-size: 0.7rem;">@generator.ExistingOffPeakMWTime?.ToString(@"hh\:mm")</small>
+                                                            <small class="time-label">
+                                                                @generator.ExistingOffPeakMWTime?.ToString(@"hh\:mm")
+                                                            </small>
                                                         </div>
                                                     }
                                                     else
                                                     {
                                                         <input type="number"
                                                                name="MUEntries[@(entryIndex)].OffPeakMW"
-                                                               class="form-control form-control-sm mb-1"
-                                                               step="1"
-                                                               min="1"
+                                                               class="form-control form-control-sm mb-1 @(isEditing ? "input-edit" : "")"
+                                                               step="1" min="1" max="99999"
+                                                               value="@(isEditing? entry?.OffPeakMW?.ToString() : "")"
                                                                placeholder="MW"
-                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                               style="max-width:110px; margin:0 auto;" />
                                                         <input type="time"
                                                                name="MUEntries[@(entryIndex)].OffPeakMWTime"
-                                                               class="form-control form-control-sm"
-                                                               value="@(Model.MUEntries[entryIndex].OffPeakMWTime?.ToString(@"hh\:mm") ?? "03:00")" />
+                                                               class="form-control form-control-sm @(isEditing ? "input-edit" : "")"
+                                                               value="@(entry?.OffPeakMWTime?.ToString(@"hh\:mm") ?? "03:00")"
+                                                               style="max-width:110px; margin:0 auto;" />
                                                     }
                                                 </td>
+
+                                                @* ── DAY PEAK MW ── *@
                                                 <td class="align-middle text-center">
-                                                    @if (generator.HasSubmitted)
+                                                    @if (generator.HasSubmitted && !isEditing)
                                                     {
                                                         <div>
-                                                            <span class="badge badge-warning text-dark px-2 py-1" style="font-size: 0.85rem;">
+                                                            <span class="val-badge val-daypeak">
                                                                 @generator.ExistingDayPeakMW MW
                                                             </span>
-                                                            <br />
-                                                            <small class="text-muted" style="font-size: 0.7rem;">@generator.ExistingDayPeakMWTime?.ToString(@"hh\:mm")</small>
+                                                            <small class="time-label">
+                                                                @generator.ExistingDayPeakMWTime?.ToString(@"hh\:mm")
+                                                            </small>
                                                         </div>
                                                     }
                                                     else
                                                     {
                                                         <input type="number"
                                                                name="MUEntries[@(entryIndex)].DayPeakMW"
-                                                               class="form-control form-control-sm mb-1"
-                                                               step="1"
-                                                               min="1"
+                                                               class="form-control form-control-sm mb-1 @(isEditing ? "input-edit" : "")"
+                                                               step="1" min="1" max="99999"
+                                                               value="@(isEditing? entry?.DayPeakMW?.ToString() : "")"
                                                                placeholder="MW"
-                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                               style="max-width:110px; margin:0 auto;" />
                                                         <input type="time"
                                                                name="MUEntries[@(entryIndex)].DayPeakMWTime"
-                                                               class="form-control form-control-sm"
-                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                               class="form-control form-control-sm @(isEditing ? "input-edit" : "")"
+                                                               value="@(entry?.DayPeakMWTime?.ToString(@"hh\:mm") ?? "")"
+                                                               style="max-width:110px; margin:0 auto;" />
                                                     }
                                                 </td>
+
+                                                @* ── MIN GENERATION ── *@
                                                 <td class="align-middle text-center">
-                                                    @if (generator.HasSubmitted)
+                                                    @if (generator.HasSubmitted && !isEditing)
                                                     {
                                                         <div>
-                                                            <span class="badge badge-success text-white px-2 py-1" style="font-size: 0.85rem;">
+                                                            <span class="val-badge val-mingen">
                                                                 @generator.ExistingMinGeneration MW
                                                             </span>
-                                                            <br />
-                                                            <small class="text-muted" style="font-size: 0.7rem;">@generator.ExistingMinGenerationTime?.ToString(@"hh\:mm")</small>
+                                                            <small class="time-label">
+                                                                @generator.ExistingMinGenerationTime?.ToString(@"hh\:mm")
+                                                            </small>
                                                         </div>
                                                     }
                                                     else
                                                     {
                                                         <input type="number"
                                                                name="MUEntries[@(entryIndex)].MinGeneration"
-                                                               class="form-control form-control-sm mb-1"
-                                                               step="1"
-                                                               min="1"
+                                                               class="form-control form-control-sm mb-1 @(isEditing ? "input-edit" : "")"
+                                                               step="1" min="1" max="99999"
+                                                               value="@(isEditing? entry?.MinGeneration?.ToString() : "")"
                                                                placeholder="MW"
-                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                               style="max-width:110px; margin:0 auto;" />
                                                         <input type="time"
                                                                name="MUEntries[@(entryIndex)].MinGenerationTime"
-                                                               class="form-control form-control-sm"
-                                                               style="max-width: 120px; margin: 0 auto; font-size: 0.85rem;" />
+                                                               class="form-control form-control-sm @(isEditing ? "input-edit" : "")"
+                                                               value="@(entry?.MinGenerationTime?.ToString(@"hh\:mm") ?? "")"
+                                                               style="max-width:110px; margin:0 auto;" />
                                                     }
-                                                    @if (!generator.HasSubmitted)
+                                                    @if (!generator.HasSubmitted || isEditing)
                                                     {
                                                         entryIndex++;
                                                     }
                                                 </td>
+
+                                                @* ── ACTION ── *@
                                                 <td class="align-middle text-center">
                                                     @if (generator.HasSubmitted && User.Identity.Name?.ToLower() == "admin")
                                                     {
-                                                        <button type="submit"
-                                                                asp-page-handler="Delete"
-                                                                asp-route-stationName="@generator.StationName"
-                                                                class="btn btn-sm btn-danger"
-                                                                onclick="return confirm('Are you sure you want to delete this record?');">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
+                                                        <div class="d-flex justify-content-center gap-1">
+                                                            @if (!isEditing)
+                                                            {
+                                                                @* ✅ Edit — GET request, no CSRF needed *@
+                                                                <a asp-page-handler="ToggleEdit"
+                                                                   asp-route-stationName="@generator.StationName"
+                                                                   class="btn btn-sm btn-warning"
+                                                                   title="Edit this record">
+                                                                    <i class="fas fa-pencil-alt"></i>
+                                                                </a>
+                                                            }
+                                                            @* ✅ Delete — separate form with AntiForgeryToken *@
+                                                            <button type="submit"
+                                                                    asp-page-handler="Delete"
+                                                                    name="stationName"
+                                                                    value="@generator.StationName"
+                                                                    class="btn btn-sm btn-danger"
+                                                                    title="Delete"
+                                                                    onclick="return confirm('Delete record for @generator.StationName?');">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
                                                     }
                                                     else
                                                     {
@@ -339,9 +470,10 @@
                                     else
                                     {
                                         <tr>
-                                            <td colspan="7" class="text-center py-5">
-                                                <div style="color: #6c757d;">
-                                                    <i class="fas fa-inbox fa-3x mb-3 d-block" style="opacity: 0.5;"></i>
+                                            <td colspan="12" class="text-center py-5">
+                                                <div style="color:#6c757d;">
+                                                    <i class="fas fa-inbox fa-3x mb-3 d-block"
+                                                       style="opacity:0.5;"></i>
                                                     <h5>No generators found</h5>
                                                 </div>
                                             </td>
@@ -351,14 +483,32 @@
                             </table>
                         </div>
 
-                        @if (pendingCount > 0)
+                        @if (showSaveButton)
                         {
                             <div class="card-footer bg-light">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <i class="fas fa-info-circle text-primary"></i>
                                         <small class="text-muted">
-                                            Enter values for pending generators and click Save All
+                                            @if (pendingCount > 0 && editCount > 0)
+                                            {
+                                                <text>
+                                                    Saving @pendingCount pending +
+                                                    @editCount edited record(s).
+                                                    Schedule MUs only for ISGS/IPP.
+                                                </text>
+                                            }
+                                            else if (editCount > 0)
+                                            {
+                                                <text>Saving @editCount edited record(s).</text>
+                                            }
+                                            else
+                                            {
+                                                <text>
+                                                    Enter values for pending generators
+                                                    and click Save All.
+                                                </text>
+                                            }
                                         </small>
                                     </div>
                                     <button type="submit" class="btn btn-success btn-lg">
@@ -368,12 +518,18 @@
                             </div>
                         }
                     </form>
+
                 </div>
             </div>
 
-            {{!-- ========= EXPORT BUTTON — only active when all stations submitted ========= --!}}
+            <!-- Export Button -->
             <div class="d-flex flex-column align-items-end mt-3 mb-5">
-                @if (allSubmitted)
+                <a asp-page-handler="ExportExcel"
+                   class="btn btn-export-active btn-lg">
+                    <i class="fas fa-file-excel mr-2"></i>
+                    Export Yesterday's Data to Excel
+                </a>
+                @* @if (allSubmitted)
                 {
                     <a asp-page-handler="ExportExcel"
                        class="btn btn-export-active btn-lg">
@@ -388,17 +544,17 @@
                 else
                 {
                     <button class="btn btn-export-locked btn-lg" disabled
-                            title="All generators must submit before export is available">
+                            title="All generators must submit before export">
                         <i class="fas fa-lock mr-2"></i>
                         Export Yesterday's Data to Excel
                     </button>
                     <small class="text-danger mt-2">
                         <i class="fas fa-hourglass-half mr-1"></i>
-                        @pendingCount station(s) still pending — export unlocks when all submit
+                        @pendingCount station(s) still pending —
+                        export unlocks when all submit
                     </small>
-                }
+                } *@
             </div>
-
         </div>
     </div>
 </div>
@@ -409,9 +565,10 @@
     }
 
     .card {
-        border-radius: 12px;
+        border-radius: 14px;
         overflow: hidden;
-        transition: all 0.3s ease;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.10) !important;
+        transition: box-shadow 0.3s;
     }
 
     .card-header {
@@ -420,42 +577,191 @@
     }
 
     .table {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         background-color: #ffffff;
+        margin-bottom: 0;
     }
 
         .table thead th {
             font-weight: 700;
             text-transform: uppercase;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             letter-spacing: 1px;
-            padding: 1rem;
-            background-color: #343a40 !important;
-            color: #ffffff !important;
+            padding: 0.85rem 0.75rem;
             border: none;
+            color: #ffffff !important;
         }
 
-        .table tbody td {
-            padding: 1rem;
-            vertical-align: middle;
-            border-bottom: 1px solid #dee2e6;
-        }
+    .thead-dark tr th:nth-child(1) {
+        background-color: #2c3e50 !important;
+    }
 
-        .table tbody tr {
-            transition: all 0.2s;
-        }
+    .thead-dark tr th:nth-child(2) {
+        background-color: #2c3e50 !important;
+    }
+
+    .thead-dark tr th:nth-child(3) {
+        background-color: #2c3e50 !important;
+    }
+
+    .thead-dark tr th:nth-child(4) {
+        background-color: #2c3e50 !important;
+    }
+
+    .thead-dark tr th:nth-child(5) {
+        background-color: #1565c0 !important;
+    }
+
+    .thead-dark tr th:nth-child(6) {
+        background-color: #6a1b9a !important;
+    }
+
+    .thead-dark tr th:nth-child(7) {
+        background-color: #2e7d32 !important;
+    }
+
+    .thead-dark tr th:nth-child(8) {
+        background-color: #b71c1c !important;
+    }
+
+    .thead-dark tr th:nth-child(9) {
+        background-color: #e65100 !important;
+    }
+
+    .thead-dark tr th:nth-child(10) {
+        background-color: #f9a825 !important;
+        color: #212529 !important;
+    }
+
+    .thead-dark tr th:nth-child(11) {
+        background-color: #00695c !important;
+    }
+
+    .thead-dark tr th:nth-child(12) {
+        background-color: #37474f !important;
+    }
+
+    .table tbody td {
+        padding: 0.85rem 0.75rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #e9ecef;
+    }
 
     .table-warning {
-        background-color: #fff3cd !important;
+        background-color: #fff8e1 !important;
     }
 
     .table-success {
-        background-color: #d4edda !important;
+        background-color: #e8f5e9 !important;
     }
 
-    .table tbody tr:hover {
-        transform: translateX(2px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    .table-edit {
+        background-color: #fff3e0 !important;
+        border-left: 4px solid #ff9800 !important;
+    }
+
+    .table tbody tr {
+        transition: all 0.18s ease;
+        border-left: 4px solid transparent;
+    }
+
+    .table-success:hover {
+        background-color: #c8e6c9 !important;
+        border-left-color: #388e3c !important;
+        transform: translateX(3px);
+        box-shadow: 0 3px 10px rgba(56,142,60,0.15);
+    }
+
+    .table-warning:hover {
+        background-color: #ffe082 !important;
+        border-left-color: #f9a825 !important;
+        transform: translateX(3px);
+        box-shadow: 0 3px 10px rgba(249,168,37,0.2);
+    }
+
+    .table-edit:hover {
+        background-color: #ffe0b2 !important;
+        transform: translateX(3px);
+        box-shadow: 0 3px 10px rgba(255,152,0,0.2);
+    }
+
+    .input-edit {
+        border: 2px solid #ff9800 !important;
+        background-color: #fffde7 !important;
+    }
+
+        .input-edit:focus {
+            border-color: #e65100 !important;
+            box-shadow: 0 0 0 0.2rem rgba(230,81,0,0.2) !important;
+        }
+
+    .val-badge {
+        display: inline-block;
+        padding: 0.3rem 0.7rem;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        letter-spacing: 0.3px;
+    }
+
+    .val-daily {
+        background-color: #e3f2fd;
+        color: #0d47a1;
+        border: 1px solid #90caf9;
+    }
+
+    .val-schedule {
+        background-color: #f3e5f5;
+        color: #4a148c;
+        border: 1px solid #ce93d8;
+    }
+
+    .val-exbus {
+        background-color: #e8f5e9;
+        color: #1b5e20;
+        border: 1px solid #a5d6a7;
+    }
+
+    .val-peak {
+        background-color: #ffebee;
+        color: #b71c1c;
+        border: 1px solid #ef9a9a;
+    }
+
+    .val-offpeak {
+        background-color: #fff3e0;
+        color: #bf360c;
+        border: 1px solid #ffcc80;
+    }
+
+    .val-daypeak {
+        background-color: #fffde7;
+        color: #827717;
+        border: 1px solid #fff176;
+    }
+
+    .val-mingen {
+        background-color: #e0f2f1;
+        color: #004d40;
+        border: 1px solid #80cbc4;
+    }
+
+    .time-label {
+        display: block;
+        font-size: 0.7rem;
+        color: #78909c;
+        margin-top: 2px;
+        font-weight: 500;
+    }
+
+    .badge-usertype-schedule {
+        background-color: #1565c0;
+        color: #fff;
+    }
+
+    .badge-usertype-other {
+        background-color: #90a4ae;
+        color: #fff;
     }
 
     .badge {
@@ -489,7 +795,7 @@
 
     .btn-success:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4);
+        box-shadow: 0 6px 12px rgba(40,167,69,0.4);
     }
 
     .form-control-sm {
@@ -499,21 +805,40 @@
 
         .form-control-sm:focus {
             border-color: #28a745;
-            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.15);
+            box-shadow: 0 0 0 0.2rem rgba(40,167,69,0.15);
         }
 
     .card-footer {
         padding: 1rem 1.5rem;
     }
 
-    /* =============================================
-           EXPORT BUTTON STYLES
-           ============================================= */
+    .gap-1 {
+        gap: 0.25rem;
+    }
+
+    @@keyframes flashy-blink {
+        0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 0 10px rgba(158,29,6,0.5);
+        }
+
+        50% {
+            opacity: 0.6;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(158,29,6,0.8), 0 0 30px rgba(255,193,7,0.6);
+        }
+    }
+
+    .blink-badge {
+        animation: flashy-blink 1s infinite;
+    }
+
     .btn-export-active {
         background: linear-gradient(135deg, #1a7a1a 0%, #28a745 100%);
         color: #ffffff !important;
         border: none;
-        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+        box-shadow: 0 4px 15px rgba(40,167,69,0.4);
         text-decoration: none;
         display: inline-flex;
         align-items: center;
@@ -523,7 +848,7 @@
             background: linear-gradient(135deg, #145214 0%, #1e7e34 100%);
             color: #ffffff !important;
             transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.55);
+            box-shadow: 0 10px 25px rgba(40,167,69,0.55);
             text-decoration: none;
         }
 
@@ -535,24 +860,6 @@
         display: inline-flex;
         align-items: center;
         opacity: 0.75;
-    }
-
-    @@keyframes flashy-blink {
-        0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-            box-shadow: 0 0 10px rgba(158, 29, 6, 0.5);
-        }
-
-        50% {
-            opacity: 0.6;
-            transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(158, 29, 6, 0.8), 0 0 30px rgba(255, 193, 7, 0.6);
-        }
-    }
-
-    .blink-badge {
-        animation: flashy-blink 1s infinite;
     }
 </style>
 

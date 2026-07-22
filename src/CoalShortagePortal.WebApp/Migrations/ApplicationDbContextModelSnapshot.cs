@@ -17,7 +17,7 @@ namespace CoalShortagePortal.WebApp.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("ProductVersion", "10.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -191,6 +191,9 @@ namespace CoalShortagePortal.WebApp.Migrations
 
                     b.Property<TimeSpan>("PeakMWTime")
                         .HasColumnType("interval");
+
+                    b.Property<float>("ScheduleMUs")
+                        .HasColumnType("real");
 
                     b.Property<string>("StationName")
                         .IsRequired()
@@ -549,6 +552,11 @@ namespace CoalShortagePortal.WebApp.Migrations
 
                     b.Property<string>("CreatedById")
                         .HasColumnType("text");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("LastModified")
                         .HasColumnType("timestamp with time zone");

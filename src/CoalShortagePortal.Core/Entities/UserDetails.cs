@@ -17,6 +17,10 @@ namespace CoalShortagePortal.Core.Entities
         [MaxLength(50)]
         public string UserType { get; set; } // ISGS, RE, IPP, State_Gen
 
+        [Required]
+        [MaxLength(50)]
+        public string DisplayName { get; set; }
+
         [MaxLength(100)]
         public string State { get; set; } // Only for State_Gen
 

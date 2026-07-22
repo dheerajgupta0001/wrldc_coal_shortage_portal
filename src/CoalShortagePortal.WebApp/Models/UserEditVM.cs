@@ -25,6 +25,10 @@ namespace CoalShortagePortal.WebApp.Models
         [Display(Name = "User Type")]
         public string UserType { get; set; }
 
+        [Required]
+        [Display(Name = "Display Name")]
+        public string DisplayName { get; set; }
+
         [Display(Name = "State")]
         public string State { get; set; }
     }

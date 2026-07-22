@@ -116,6 +116,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                         {
                             UserId = user.Id,
                             UserType = vm.UserType,
+                            DisplayName = vm.DisplayName,
                             State = vm.UserType == "State_Gen" ? vm.State : null,
                             CreatedById = currentUserId,
                             Created = currentTime,
@@ -191,6 +192,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                 Username = user.UserName,
                 PhoneNumber = user.PhoneNumber,
                 UserType = userDetails?.UserType,
+                DisplayName = userDetails?.DisplayName,
                 State = userDetails?.State
             };
             return View(vm);
@@ -314,6 +316,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                     {
                         // Update existing record
                         userDetails.UserType = vm.UserType;
+                        userDetails.DisplayName = vm.DisplayName;
                         userDetails.State = vm.UserType == "State_Gen" ? vm.State : null;
                         userDetails.LastModifiedById = currentUserId;
                         userDetails.LastModified = DateTime.UtcNow;
@@ -325,6 +328,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                         {
                             UserId = id,
                             UserType = vm.UserType,
+                            DisplayName = vm.DisplayName,
                             State = vm.UserType == "State_Gen" ? vm.State : null,
                             CreatedById = currentUserId,
                             Created = DateTime.UtcNow,

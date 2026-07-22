@@ -91,8 +91,8 @@ namespace CoalShortagePortal.WebApp
 
             services
                 .AddControllersWithViews(options =>
-                    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
-                .AddRazorRuntimeCompilation();
+                    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
+                //.AddRazorRuntimeCompilation();
             services.AddRazorPages();
         }
 
