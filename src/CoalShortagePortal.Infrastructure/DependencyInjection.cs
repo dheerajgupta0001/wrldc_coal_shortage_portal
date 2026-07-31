@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using CoalShortagePortal.Core.Interfaces.ReportingData;
 
 namespace CoalShortagePortal.Infrastructure
 {
@@ -37,6 +38,11 @@ namespace CoalShortagePortal.Infrastructure
             services.AddTransient<IEmailSender, EmailSender>();
             services.AddTransient<ISmsSender, SmsSender>();
             services.AddTransient<ReportingDataService>();
+            services.AddScoped<
+                IExBusGenMUsExportService,
+                ExBusGenMUsExportService>();
+            services.AddHostedService<ExBusGenMuExportScheduler>();
+
 
             services.AddDNTCaptcha(options =>
             {

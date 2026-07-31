@@ -5,6 +5,10 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using CoalShortagePortal.Application.Interfaces;
+using Azure.Identity;
+using Microsoft.Graph;
+using Microsoft.Graph.Models;
+using Microsoft.Graph.Users.Item.SendMail;
 
 namespace CoalShortagePortal.Infrastructure.Services.Email
 {
@@ -23,37 +27,111 @@ namespace CoalShortagePortal.Infrastructure.Services.Email
         {
             try
             {
-                var smtpServer = _configuration["EmailSettings:SmtpServer"];
-                var smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"]);
-                var senderEmail = _configuration["EmailSettings:SenderEmail"];
-                var senderName = _configuration["EmailSettings:SenderName"];
-                var username = _configuration["EmailSettings:Username"];
-                var password = _configuration["EmailSettings:Password"];
+                var tenantId =
+                    _configuration["GraphMail:TenantId"];
 
-                using (var client = new SmtpClient(smtpServer, smtpPort))
+                var clientId =
+                    _configuration["GraphMail:ClientId"];
+
+                var clientSecret =
+                    _configuration["GraphMail:ClientSecret"];
+
+                var senderEmail =
+                    _configuration["GraphMail:SenderEmail"];
+
+                var scopes = new[]
                 {
-                    client.EnableSsl = true;
-                    client.UseDefaultCredentials = false;
-                    client.Credentials = new NetworkCredential(username, password);
+                    "https://graph.microsoft.com/.default"
+                };
+                
+                var credential =
+                    new ClientSecretCredential(
+                        tenantId,
+                        clientId,
+                        clientSecret);
 
-                    var mailMessage = new MailMessage
+                var graphClient =
+                    new GraphServiceClient(
+                        credential,
+                        scopes);
+
+                var requestBody =
+                    new SendMailPostRequestBody
                     {
-                        From = new MailAddress(senderEmail, senderName),
-                        Subject = subject,
-                        Body = message,
-                        IsBodyHtml = true
-                    };
-                    mailMessage.To.Add(toEmail);
+                        Message = new Message
+                        {
+                            Subject = subject,
 
-                    await client.SendMailAsync(mailMessage);
-                    _logger.LogInformation($"Email sent successfully to {toEmail}");
-                }
+                            Body = new ItemBody
+                            {
+                                ContentType = BodyType.Html,
+                                Content = message
+                            },
+
+                            ToRecipients =
+                            [
+                                new Recipient
+                        {
+                            EmailAddress =
+                                new EmailAddress
+                                {
+                                    Address = toEmail
+                                }
+                        }
+                            ]
+                        },
+
+                        SaveToSentItems = true
+                    };
+
+                await graphClient
+                    .Users[senderEmail]
+                    .SendMail
+                    .PostAsync(requestBody);
+
+                _logger.LogInformation(
+                    $"Email sent successfully to {toEmail}");
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failed to send email to {toEmail}: {ex.Message}");
+                _logger.LogError(ex,
+                    $"Failed to send email to {toEmail}");
+
                 throw;
             }
+            //try
+            //{
+            //    var smtpServer = _configuration["EmailSettings:SmtpServer"];
+            //    var smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"]);
+            //    var senderEmail = _configuration["EmailSettings:SenderEmail"];
+            //    var senderName = _configuration["EmailSettings:SenderName"];
+            //    var username = _configuration["EmailSettings:Username"];
+            //    var password = _configuration["EmailSettings:Password"];
+
+            //    using (var client = new SmtpClient(smtpServer, smtpPort))
+            //    {
+            //        client.EnableSsl = true;
+            //        client.UseDefaultCredentials = false;
+            //        client.Credentials = new NetworkCredential(username, password);
+
+            //        var mailMessage = new MailMessage
+            //        {
+            //            From = new MailAddress(senderEmail, senderName),
+            //            Subject = subject,
+            //            Body = message,
+            //            IsBodyHtml = true
+            //        };
+            //        mailMessage.To.Add(toEmail);
+
+            //        await client.SendMailAsync(mailMessage);
+            //        _logger.LogInformation($"Email sent successfully to {toEmail}");
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    _logger.LogError($"Failed to send email to {toEmail}: {ex.Message}");
+            //    throw;
+            //}
         }
 
         public async Task SendOtpEmailAsync(string toEmail, string otp)

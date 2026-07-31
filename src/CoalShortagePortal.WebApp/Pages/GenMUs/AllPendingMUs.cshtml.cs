@@ -1,18 +1,22 @@
 ﻿using CoalShortagePortal.Core.Entities;
+using CoalShortagePortal.Core.Interfaces.ReportingData;
 using CoalShortagePortal.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Drawing;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace CoalShortagePortal.WebApp.Pages.GenMUs
@@ -23,15 +27,21 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         private readonly ApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger<AllPendingMUsModel> _logger;
+        private readonly IConfiguration _configuration;
+        private readonly IExBusGenMUsExportService _exportService;
 
         public AllPendingMUsModel(
             ApplicationDbContext context,
             UserManager<IdentityUser> userManager,
-            ILogger<AllPendingMUsModel> logger)
+            ILogger<AllPendingMUsModel> logger,
+            IConfiguration configuration,
+            IExBusGenMUsExportService exportService)
         {
             _context = context;
             _userManager = userManager;
             _logger = logger;
+            _configuration = configuration;
+            _exportService = exportService;
         }
 
         public List<PendingMUViewModel> PendingGenerators { get; set; }
@@ -65,10 +75,8 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         {
             public string StationName { get; set; }
 
-            // ✅ UserType from hidden field — will be re-validated from DB in OnPostAsync
             public string UserType { get; set; }
 
-            // ✅ IsEditMode from hidden field — will be re-determined from DB in OnPostAsync
             public bool IsEditMode { get; set; }
 
             [Range(0.01, 99999.99,
@@ -114,6 +122,16 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             public bool IsScheduleUser => UserType == "ISGS" || UserType == "IPP";
         }
 
+        public class ScadaCellMappingModel
+        {
+            public int Id { get; set; }
+            public string GeneratingStationName { get; set; }
+            public string StationTypeName { get; set; }
+            public int? Fuel { get; set; }
+            public string FuelType { get; set; }
+            public string CellReference { get; set; }
+        }
+
         // ============================================================
         // GET
         // ============================================================
@@ -128,12 +146,12 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
             YesterdayDate = DateTime.Now.AddDays(-1).Date;
 
-            // ✅ Restore editing stations from TempData using Peek (keeps it alive)
             if (TempData.Peek("EditingStations") is string editJson
                 && !string.IsNullOrEmpty(editJson))
             {
                 EditingStations = System.Text.Json.JsonSerializer
                     .Deserialize<List<string>>(editJson);
+
                 TempData.Keep("EditingStations");
             }
 
@@ -149,20 +167,21 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             if (User.Identity.Name?.ToLower() != "admin")
                 return RedirectToPage("/GenMUs/Index");
 
-            // ✅ Validate stationName is not empty/null
             if (string.IsNullOrWhiteSpace(stationName))
                 return RedirectToPage("./AllPendingMUs");
 
             var editing = new List<string>();
+
             if (TempData["EditingStations"] is string existing
                 && !string.IsNullOrEmpty(existing))
+            {
                 editing = System.Text.Json.JsonSerializer
                     .Deserialize<List<string>>(existing);
+            }
 
             if (!editing.Contains(stationName))
                 editing.Add(stationName);
 
-            // ✅ Persist via TempData then redirect to clean URL — no query string
             TempData["EditingStations"] = System.Text.Json.JsonSerializer
                 .Serialize(editing);
 
@@ -194,6 +213,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             {
                 TempData["ErrorMessage"] =
                     "No MU values entered. Please enter at least one value to save.";
+
                 await LoadPageDataAsync();
                 return Page();
             }
@@ -202,20 +222,19 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             {
                 try
                 {
-                    // ✅ SECURITY FIX 1: Validate station exists in Identity — never trust hidden field
                     var stationUser = await _userManager
                         .FindByNameAsync(entry.StationName);
+
                     if (stationUser == null)
                     {
                         _logger.LogWarning(
                             "Invalid station name submitted by admin: {Station}",
                             entry.StationName);
-                        errorMessages.Add(
-                            $"Invalid station: record skipped.");
+
+                        errorMessages.Add("Invalid station: record skipped.");
                         continue;
                     }
 
-                    // ✅ SECURITY FIX 2: Get UserType from DB — never trust hidden field
                     var dbUserType = await _context.UserDetails
                         .Where(ud => ud.UserId == stationUser.Id)
                         .Select(ud => ud.UserType)
@@ -224,7 +243,6 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                     bool isScheduleUser =
                         dbUserType == "ISGS" || dbUserType == "IPP";
 
-                    // Validate ExBus
                     if (entry.ExBus.HasValue && entry.ExBus <= 0)
                     {
                         errorMessages.Add(
@@ -232,17 +250,14 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                         continue;
                     }
 
-                    // Validate ScheduleMUs for ISGS/IPP
                     if (isScheduleUser &&
                         (!entry.ScheduleMUs.HasValue || entry.ScheduleMUs <= 0))
                     {
                         errorMessages.Add(
-                            $"{entry.StationName}: Schedule MUs required " +
-                            $"for {dbUserType} stations.");
+                            $"{entry.StationName}: Schedule MUs required for {dbUserType} stations.");
                         continue;
                     }
 
-                    // ✅ SECURITY FIX 3: Determine edit mode from DB — never trust hidden field
                     var existing = await _context.DailyMUsDatas
                         .FirstOrDefaultAsync(d =>
                             d.DataDate.Date == YesterdayDate
@@ -252,57 +267,74 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
                     if (isActuallyEditMode)
                     {
-                        // UPDATE existing record
                         existing.DailyMUs = entry.DailyMUs.Value;
                         existing.ScheduleMUs = isScheduleUser
-                            ? (entry.ScheduleMUs ?? 0f) : 0f;
+                            ? (entry.ScheduleMUs ?? 0f)
+                            : 0f;
+
                         existing.ExBus = entry.ExBus.Value;
                         existing.PeakMW = entry.PeakMW.Value;
                         existing.PeakMWTime =
                             entry.PeakMWTime ?? new TimeSpan(19, 0, 0);
+
                         existing.OffPeakMW = entry.OffPeakMW.Value;
                         existing.OffPeakMWTime =
                             entry.OffPeakMWTime ?? new TimeSpan(3, 0, 0);
+
                         existing.DayPeakMW = entry.DayPeakMW.Value;
                         existing.DayPeakMWTime = entry.DayPeakMWTime.Value;
+
                         existing.MinGeneration = entry.MinGeneration.Value;
                         existing.MinGenerationTime = entry.MinGenerationTime.Value;
+
                         existing.LastModified = DateTime.UtcNow;
+
                         editCount++;
                     }
                     else
                     {
-                        // INSERT new record
                         var newData = new DailyMUsData
                         {
                             DataDate = DateTime.SpecifyKind(
-                                YesterdayDate, DateTimeKind.Utc),
+                                YesterdayDate,
+                                DateTimeKind.Utc),
+
                             DailyMUs = entry.DailyMUs.Value,
+
                             ScheduleMUs = isScheduleUser
-                                ? (entry.ScheduleMUs ?? 0f) : 0f,
+                                ? (entry.ScheduleMUs ?? 0f)
+                                : 0f,
+
                             ExBus = entry.ExBus.Value,
+
                             PeakMW = entry.PeakMW.Value,
                             PeakMWTime =
                                 entry.PeakMWTime ?? new TimeSpan(19, 0, 0),
+
                             OffPeakMW = entry.OffPeakMW.Value,
                             OffPeakMWTime =
                                 entry.OffPeakMWTime ?? new TimeSpan(3, 0, 0),
+
                             DayPeakMW = entry.DayPeakMW.Value,
                             DayPeakMWTime = entry.DayPeakMWTime.Value,
+
                             MinGeneration = entry.MinGeneration.Value,
                             MinGenerationTime = entry.MinGenerationTime.Value,
+
                             StationName = entry.StationName
                         };
+
                         _context.DailyMUsDatas.Add(newData);
                         successCount++;
                     }
                 }
                 catch (Exception ex)
                 {
-                    // ✅ SECURITY FIX 4: Log full error internally, show generic message
-                    _logger.LogError(ex,
+                    _logger.LogError(
+                        ex,
                         "Error processing MU entry for station {Station}",
                         entry.StationName);
+
                     errorMessages.Add(
                         $"{entry.StationName}: Failed to process. Please try again.");
                 }
@@ -314,25 +346,29 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 {
                     await _context.SaveChangesAsync();
 
-                    // ✅ Clear edit mode after successful save
                     TempData.Remove("EditingStations");
 
                     var parts = new List<string>();
+
                     if (successCount > 0)
                         parts.Add($"{successCount} new record(s) saved");
+
                     if (editCount > 0)
                         parts.Add($"{editCount} record(s) updated");
+
                     TempData["SuccessMessage"] =
                         string.Join(", ", parts) + " successfully!";
                 }
                 catch (Exception ex)
                 {
-                    // ✅ SECURITY FIX 4: Generic error message to user
-                    _logger.LogError(ex,
+                    _logger.LogError(
+                        ex,
                         "Database error saving MU data by admin {Admin}",
                         User.Identity.Name);
+
                     TempData["ErrorMessage"] =
                         "An error occurred while saving. Please try again or contact support.";
+
                     await LoadPageDataAsync();
                     return Page();
                 }
@@ -355,7 +391,6 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 return RedirectToPage("/Index");
             }
 
-            // ✅ Validate stationName
             if (string.IsNullOrWhiteSpace(stationName))
             {
                 TempData["ErrorMessage"] = "Invalid station name.";
@@ -369,13 +404,15 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 return RedirectToPage();
             }
 
-            // ✅ Verify station exists in Identity before deleting
             var stationUser = await _userManager.FindByNameAsync(stationName);
+
             if (stationUser == null)
             {
                 _logger.LogWarning(
                     "Delete attempt for non-existent station: {Station} by {Admin}",
-                    stationName, User.Identity.Name);
+                    stationName,
+                    User.Identity.Name);
+
                 TempData["ErrorMessage"] = "Station not found.";
                 return RedirectToPage();
             }
@@ -394,9 +431,11 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
                 _logger.LogInformation(
                     "Record deleted for station {Station} by admin {Admin}",
-                    stationName, User.Identity.Name);
+                    stationName,
+                    User.Identity.Name);
+
                 TempData["SuccessMessage"] =
-                    $"Record for station deleted successfully.";
+                    "Record for station deleted successfully.";
             }
             else
             {
@@ -407,169 +446,95 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         }
 
         // ============================================================
-        // GET: Export Excel
+        // GET: Export ExBus Excel
+        // File name example: ExBus_22_07_2026.xlsx
         // ============================================================
         [Authorize]
-        public async Task<IActionResult> OnGetExportExcelAsync()
+        public async Task<IActionResult> OnGetExportExBusExcelAsync()
         {
             if (User.Identity.Name?.ToLower() != "admin")
             {
                 _logger.LogWarning(
-                    "Unauthorized export attempt by {User}",
+                    "Unauthorized ExBus export attempt by {User}",
                     User.Identity.Name);
+
                 TempData["ErrorMessage"] = "Access denied.";
                 return RedirectToPage();
             }
 
             var yesterday = DateTime.Now.AddDays(-1).Date;
 
-            var allUsers = await _userManager.Users
-                .Where(u => !u.UserName.StartsWith("wr_")
-                         && u.UserName.ToLower() != "admin")
-                .ToListAsync();
+            var submissions = await GetYesterdaySubmissionsAsync(yesterday);
 
-            var submissions = await _context.DailyMUsDatas
-                .Where(d => d.DataDate.Date == yesterday
-                         && !d.StationName.StartsWith("wr_"))
-                .OrderBy(d => d.StationName)
-                .ToListAsync();
-
-            var pendingStations = allUsers
-                .Where(u => !submissions.Any(s => s.StationName == u.UserName))
-                .ToList();
-
-            //if (pendingStations.Any())
-            //{
-            //    TempData["ErrorMessage"] =
-            //        $"Cannot export — {pendingStations.Count} " +
-            //        $"station(s) have not submitted yet.";
-            //    return RedirectToPage();
-            //}
-
-            // Get UserTypes for all stations
-            var allUserIds = allUsers.Select(u => u.Id).ToList();
-            var userTypeMap = await _context.UserDetails
-                .Where(ud => allUserIds.Contains(ud.UserId))
-                .ToDictionaryAsync(ud => ud.UserId, ud => ud.UserType);
-
-            var userNameToTypeMap = allUsers.ToDictionary(
-                u => u.UserName,
-                u => userTypeMap.TryGetValue(u.Id, out var ut) ? ut : "");
+            var scadaMappings = await GetScadaCellMappingsAsync();
 
             ExcelPackage.License.SetNonCommercialPersonal("CoalShortagePortal");
 
-            using var package = new ExcelPackage();
-            var ws = package.Workbook.Worksheets.Add("MU Data");
+            var bytes = GenerateCellReferenceExcel(
+                submissions: submissions,
+                scadaMappings: scadaMappings,
+                sheetName: "ExBus",
+                valueSelector: d => d.ExBus,
+                valueRowColor: Color.FromArgb(232, 245, 233));
 
-            int totalCols = submissions.Count + 1;
+            string fileName = $"ExBus_{yesterday:dd_MM_yyyy}.xlsx";
 
-            // Row 1: Title
-            ws.Cells[1, 1, 1, totalCols].Merge = true;
-            ws.Cells[1, 1].Value =
-                $"Daily MU & ExBus Data — {yesterday:dd-MMM-yyyy}";
-            ws.Cells[1, 1].Style.Font.Bold = true;
-            ws.Cells[1, 1].Style.Font.Size = 13;
-            ws.Cells[1, 1].Style.HorizontalAlignment =
-                ExcelHorizontalAlignment.Center;
-            ws.Cells[1, 1].Style.VerticalAlignment =
-                ExcelVerticalAlignment.Center;
-            ws.Cells[1, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[1, 1].Style.Fill.BackgroundColor.SetColor(
-                Color.FromArgb(102, 126, 234));
-            ws.Cells[1, 1].Style.Font.Color.SetColor(Color.White);
-            ws.Row(1).Height = 26;
-
-            // Row 2: Station names
-            ws.Cells[2, 1].Value = "Station";
-            StyleLabelCell(ws.Cells[2, 1]);
-            for (int i = 0; i < submissions.Count; i++)
-            {
-                var cell = ws.Cells[2, i + 2];
-                cell.Value = submissions[i].StationName;
-                cell.Style.Font.Bold = true;
-                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                cell.Style.Fill.BackgroundColor.SetColor(
-                    Color.FromArgb(220, 220, 245));
-            }
-
-            // Row 3: Daily MUs
-            ws.Cells[3, 1].Value = "Daily MUs";
-            StyleLabelCell(ws.Cells[3, 1]);
-            for (int i = 0; i < submissions.Count; i++)
-            {
-                var cell = ws.Cells[3, i + 2];
-                cell.Value = submissions[i].DailyMUs;
-                cell.Style.Numberformat.Format = "#,##0.00";
-                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                cell.Style.Fill.BackgroundColor.SetColor(
-                    Color.FromArgb(255, 253, 231));
-            }
-
-            // Row 4: Schedule MUs — ISGS/IPP only
-            ws.Cells[4, 1].Value = "Schedule MUs";
-            StyleLabelCell(ws.Cells[4, 1]);
-            for (int i = 0; i < submissions.Count; i++)
-            {
-                var cell = ws.Cells[4, i + 2];
-                var stationName = submissions[i].StationName;
-                var ut = userNameToTypeMap.TryGetValue(stationName, out var t)
-                    ? t : "";
-                bool isIsgsIpp = ut == "ISGS" || ut == "IPP";
-
-                if (isIsgsIpp)
-                {
-                    cell.Value = submissions[i].ScheduleMUs;
-                    cell.Style.Numberformat.Format = "#,##0.00";
-                    cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    cell.Style.Fill.BackgroundColor.SetColor(
-                        Color.FromArgb(243, 229, 245));
-                }
-                else
-                {
-                    cell.Value = "N/A";
-                    cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    cell.Style.Fill.BackgroundColor.SetColor(
-                        Color.FromArgb(240, 240, 240));
-                    cell.Style.Font.Color.SetColor(Color.Gray);
-                }
-                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            }
-
-            // Row 5: ExBus
-            ws.Cells[5, 1].Value = "ExBus";
-            StyleLabelCell(ws.Cells[5, 1]);
-            for (int i = 0; i < submissions.Count; i++)
-            {
-                var cell = ws.Cells[5, i + 2];
-                cell.Value = submissions[i].ExBus;
-                cell.Style.Numberformat.Format = "#,##0.00";
-                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                cell.Style.Fill.BackgroundColor.SetColor(
-                    Color.FromArgb(232, 245, 233));
-            }
-
-            var dataBlock = ws.Cells[2, 1, 5, totalCols];
-            dataBlock.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-            dataBlock.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-            dataBlock.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-            dataBlock.Style.Border.Right.Style = ExcelBorderStyle.Thin;
-            dataBlock.Style.Border.BorderAround(ExcelBorderStyle.Medium);
-
-            ws.Cells[ws.Dimension.Address].AutoFitColumns();
-            ws.Column(1).Width = 14;
-            for (int c = 2; c <= totalCols; c++)
-                ws.Column(c).Width = Math.Max(ws.Column(c).Width, 14);
-
-            for (int r = 1; r <= 5; r++)
-                ws.Row(r).Height = 20;
-
-            var bytes = package.GetAsByteArray();
-            return File(bytes,
+            return File(
+                bytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"MU_Data_{yesterday:yyyyMMdd}.xlsx");
+                fileName);
+        }
+
+        // ============================================================
+        // GET: Export GenMU Excel
+        // File name example: GenMU_22_07_2026.xlsx
+        // ============================================================
+        [Authorize]
+        public async Task<IActionResult> OnGetExportGenMuExcelAsync()
+        {
+            if (User.Identity.Name?.ToLower() != "admin")
+            {
+                _logger.LogWarning(
+                    "Unauthorized GenMU export attempt by {User}",
+                    User.Identity.Name);
+
+                TempData["ErrorMessage"] = "Access denied.";
+                return RedirectToPage();
+            }
+
+            var yesterday = DateTime.Now.AddDays(-1).Date;
+
+            var submissions = await GetYesterdaySubmissionsAsync(yesterday);
+
+            var scadaMappings = await GetScadaCellMappingsAsync();
+
+            ExcelPackage.License.SetNonCommercialPersonal("CoalShortagePortal");
+
+            var bytes = GenerateCellReferenceExcel(
+                submissions: submissions,
+                scadaMappings: scadaMappings,
+                sheetName: "GenMU",
+                valueSelector: d => d.DailyMUs,
+                valueRowColor: Color.FromArgb(255, 253, 231));
+
+            string fileName = $"GenMU_{yesterday:dd_MM_yyyy}.xlsx";
+
+            return File(
+                bytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+
+        // ============================================================
+        // Optional old handler kept for safety
+        // If old Export button still calls ?handler=ExportExcel,
+        // this returns GenMU only.
+        // Prefer using JS below to call both new handlers.
+        // ============================================================
+        [Authorize]
+        public async Task<IActionResult> OnGetExportExcelAsync()
+        {
+            return await OnGetExportGenMuExcelAsync();
         }
 
         // ============================================================
@@ -587,6 +552,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 .ToListAsync();
 
             var allUserIds = allUsers.Select(u => u.Id).ToList();
+
             var userDetailsMap = await _context.UserDetails
                 .Where(ud => allUserIds.Contains(ud.UserId))
                 .ToDictionaryAsync(ud => ud.UserId, ud => ud.UserType);
@@ -595,10 +561,12 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
             foreach (var user in allUsers)
             {
-                if (user.UserName?.ToLower() == "admin") continue;
+                if (user.UserName?.ToLower() == "admin")
+                    continue;
 
                 var submission = yesterdaySubmissions
                     .FirstOrDefault(s => s.StationName == user.UserName);
+
                 userDetailsMap.TryGetValue(user.Id, out var userType);
 
                 PendingGenerators.Add(new PendingMUViewModel
@@ -607,15 +575,20 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                     Email = user.Email,
                     HasSubmitted = submission != null,
                     UserType = userType ?? "",
+
                     ExistingMUs = submission?.DailyMUs,
                     ExistingScheduleMUs = submission?.ScheduleMUs,
                     ExistingExBus = submission?.ExBus,
+
                     ExistingPeakMW = submission?.PeakMW,
                     ExistingPeakMWTime = submission?.PeakMWTime,
+
                     ExistingOffPeakMW = submission?.OffPeakMW,
                     ExistingOffPeakMWTime = submission?.OffPeakMWTime,
+
                     ExistingDayPeakMW = submission?.DayPeakMW,
                     ExistingDayPeakMWTime = submission?.DayPeakMWTime,
+
                     ExistingMinGeneration = submission?.MinGeneration,
                     ExistingMinGenerationTime = submission?.MinGenerationTime
                 });
@@ -650,20 +623,266 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                         StationName = p.StationName,
                         UserType = p.UserType,
                         IsEditMode = true,
+
                         DailyMUs = p.ExistingMUs,
                         ScheduleMUs = p.ExistingScheduleMUs,
                         ExBus = p.ExistingExBus,
+
                         PeakMW = p.ExistingPeakMW,
                         PeakMWTime = p.ExistingPeakMWTime,
+
                         OffPeakMW = p.ExistingOffPeakMW,
                         OffPeakMWTime = p.ExistingOffPeakMWTime,
+
                         DayPeakMW = p.ExistingDayPeakMW,
                         DayPeakMWTime = p.ExistingDayPeakMWTime,
+
                         MinGeneration = p.ExistingMinGeneration,
                         MinGenerationTime = p.ExistingMinGenerationTime
                     });
                 }
             }
+        }
+
+        private async Task<List<DailyMUsData>> GetYesterdaySubmissionsAsync(DateTime yesterday)
+        {
+            return await _context.DailyMUsDatas
+                .Where(d => d.DataDate.Date == yesterday
+                         && !d.StationName.StartsWith("wr_"))
+                .OrderBy(d => d.StationName)
+                .ToListAsync();
+        }
+
+        private byte[] GenerateCellReferenceExcel(
+            List<DailyMUsData> submissions,
+            List<ScadaCellMappingModel> scadaMappings,
+            string sheetName,
+            Func<DailyMUsData, float?> valueSelector,
+            Color valueRowColor)
+        {
+            using var package = new ExcelPackage();
+
+            var ws = package.Workbook.Worksheets.Add(sheetName);
+
+            var submissionMap = submissions
+                .GroupBy(s => NormalizeStationName(s.StationName))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.First());
+
+            int maxColumnUsed = 1;
+
+            foreach (var mapping in scadaMappings)
+            {
+                if (string.IsNullOrWhiteSpace(mapping.GeneratingStationName))
+                    continue;
+
+                if (string.IsNullOrWhiteSpace(mapping.CellReference))
+                    continue;
+
+                string stationKey =
+                    NormalizeStationName(mapping.GeneratingStationName);
+
+                submissionMap.TryGetValue(
+                    stationKey,
+                    out var submission);
+
+                string columnLetters =
+                    ExtractColumnLetters(mapping.CellReference);
+
+                if (string.IsNullOrWhiteSpace(columnLetters))
+                    continue;
+
+                int columnNumber =
+                    ExcelColumnNameToNumber(columnLetters);
+
+                if (columnNumber <= 0)
+                    continue;
+
+                maxColumnUsed = Math.Max(maxColumnUsed, columnNumber);
+
+                // Row 1: Station name at Oracle CELL_REFERENCE column
+                var stationCell = ws.Cells[1, columnNumber];
+                stationCell.Value = mapping.GeneratingStationName;
+                stationCell.Style.Font.Bold = true;
+                stationCell.Style.HorizontalAlignment =
+                    ExcelHorizontalAlignment.Center;
+                stationCell.Style.VerticalAlignment =
+                    ExcelVerticalAlignment.Center;
+                stationCell.Style.Fill.PatternType =
+                    ExcelFillStyle.Solid;
+                stationCell.Style.Fill.BackgroundColor.SetColor(
+                    Color.FromArgb(220, 220, 245));
+                stationCell.Style.Border.BorderAround(
+                    ExcelBorderStyle.Thin);
+
+                // Row 2: GenMU / ExBus value at same Oracle CELL_REFERENCE column
+                var valueCell = ws.Cells[2, columnNumber];
+
+                if (submission != null)
+                {
+                    var mappedValue = valueSelector(submission);
+
+                    if (mappedValue.HasValue)
+                    {
+                        valueCell.Value = mappedValue.Value;
+                    }
+                    else
+                    {
+                        valueCell.Value = null; // leave blank if value itself is null
+                    }
+                }
+                else
+                {
+                    valueCell.Value = null; // leave blank if station has no portal data
+                }
+
+                valueCell.Style.Numberformat.Format = "#,##0.00";
+                valueCell.Style.HorizontalAlignment =
+                    ExcelHorizontalAlignment.Center;
+                valueCell.Style.VerticalAlignment =
+                    ExcelVerticalAlignment.Center;
+                valueCell.Style.Fill.PatternType =
+                    ExcelFillStyle.Solid;
+                valueCell.Style.Fill.BackgroundColor.SetColor(valueRowColor);
+                valueCell.Style.Border.BorderAround(
+                    ExcelBorderStyle.Thin);
+            }
+
+            if (ws.Dimension != null)
+            {
+                ws.Cells[ws.Dimension.Address].AutoFitColumns();
+            }
+
+            for (int c = 1; c <= maxColumnUsed; c++)
+            {
+                ws.Column(c).Width = Math.Max(ws.Column(c).Width, 12);
+            }
+
+            ws.Row(1).Height = 22;
+            ws.Row(2).Height = 22;
+
+            return package.GetAsByteArray();
+        }
+        private static string NormalizeStationName(string stationName)
+        {
+            if (string.IsNullOrWhiteSpace(stationName))
+                return string.Empty;
+
+            return stationName
+                .Trim()
+                .ToUpperInvariant();
+        }
+
+        private static string ExtractColumnLetters(string cellReference)
+        {
+            if (string.IsNullOrWhiteSpace(cellReference))
+                return string.Empty;
+
+            var cleaned = cellReference
+                .Trim()
+                .Replace("$", "")
+                .ToUpperInvariant();
+
+            var match = Regex.Match(cleaned, "^[A-Z]+");
+
+            return match.Success ? match.Value : string.Empty;
+        }
+
+        private static int ExcelColumnNameToNumber(string columnName)
+        {
+            if (string.IsNullOrWhiteSpace(columnName))
+                return 0;
+
+            columnName = columnName.Trim().ToUpperInvariant();
+
+            int sum = 0;
+
+            foreach (char c in columnName)
+            {
+                if (c < 'A' || c > 'Z')
+                    return 0;
+
+                sum *= 26;
+                sum += c - 'A' + 1;
+            }
+
+            return sum;
+        }
+
+        private async Task<List<ScadaCellMappingModel>> GetScadaCellMappingsAsync()
+        {
+            var result = new List<ScadaCellMappingModel>();
+
+            var connectionString =
+                _configuration.GetConnectionString("ReportingConnection");
+
+            const string query = @"
+SELECT
+    gs.ID,
+    gs.GENERATING_STATION_NAME,
+    gst.NAME AS STATION_TYPE_NAME,
+    gs.FUEL,
+    f.TYPE AS FUEL_TYPE,
+    scd.CELL_REFERENCE
+FROM REPORTING_WEB_UI_UAT.GENERATING_STATION gs
+INNER JOIN REPORTING_WEB_UI_UAT.SCADA_CONFIG_DETAILS scd
+    ON scd.ELMENT_ID = gs.ID
+LEFT JOIN REPORTING_WEB_UI_UAT.FUEL f
+    ON f.ID = gs.FUEL
+LEFT JOIN REPORTING_WEB_UI_UAT.GENERATING_STATION_TYPE gst
+    ON gst.ID = gs.STATION_TYPE
+WHERE scd.SCADA_FILE_NAME_ID = 7
+ORDER BY gs.GENERATING_STATION_NAME";
+
+            using var connection = new OracleConnection(connectionString);
+            await connection.OpenAsync();
+
+            using var command = new OracleCommand(query, connection);
+
+            using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                var model = new ScadaCellMappingModel
+                {
+                    Id = reader["ID"] == DBNull.Value
+                        ? 0
+                        : Convert.ToInt32(reader["ID"]),
+
+                    GeneratingStationName = reader["GENERATING_STATION_NAME"] == DBNull.Value
+                        ? ""
+                        : reader["GENERATING_STATION_NAME"].ToString(),
+
+                    StationTypeName = reader["STATION_TYPE_NAME"] == DBNull.Value
+                        ? ""
+                        : reader["STATION_TYPE_NAME"].ToString(),
+
+                    Fuel = reader["FUEL"] == DBNull.Value
+                        ? null
+                        : Convert.ToInt32(reader["FUEL"]),
+
+                    FuelType = reader["FUEL_TYPE"] == DBNull.Value
+                        ? ""
+                        : reader["FUEL_TYPE"].ToString(),
+
+                    CellReference = reader["CELL_REFERENCE"] == DBNull.Value
+                        ? ""
+                        : reader["CELL_REFERENCE"].ToString()
+                };
+
+                result.Add(model);
+            }
+
+            return result;
+        }
+        // Temport export feature
+
+        public async Task<IActionResult> OnGetRunExportAsync()
+        {
+            await _exportService.GenerateAndUploadFilesAsync();
+
+            return Content("Export Completed");
         }
 
         private static void StyleLabelCell(ExcelRange cell)
@@ -673,6 +892,7 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             cell.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(30, 30, 60));
             cell.Style.Font.Color.SetColor(Color.White);
             cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            cell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
         }
     }
 }

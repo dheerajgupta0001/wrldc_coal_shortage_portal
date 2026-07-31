@@ -32,5 +32,8 @@ namespace CoalShortagePortal.WebApp.Models
 
         [Display(Name = "State")]
         public string State { get; set; }
+
+        [Display(Name = "Is SLDC")]
+        public bool IsSldc { get; set; }
     }
 }

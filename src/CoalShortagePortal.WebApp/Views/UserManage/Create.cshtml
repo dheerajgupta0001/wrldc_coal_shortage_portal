@@ -38,6 +38,16 @@
                             <span asp-validation-for="PhoneNumber" class="text-danger"></span>
                         </div>
                         <div class="form-group">
+                            <input asp-for="IsSldc"
+                                   class="form-check-input"
+                                   id="IsSldc" />
+
+                            <label asp-for="IsSldc"
+                                   class="form-check-label">
+                                Is SLDC
+                            </label>
+                        </div>
+                        @* <div class="form-group">
                             <label asp-for="UserType"></label>
                             <select asp-for="UserType" class="form-control" id="userTypeSelect">
                                 <option value="">-- Select User Type --</option>
@@ -45,8 +55,26 @@
                                 <option value="RE">RE</option>
                                 <option value="IPP">IPP</option>
                                 <option value="State_Gen">State_Gen</option>
+                                <option value="Bulk_Consumer">Bulk Consumer</option>
                             </select>
                             <span asp-validation-for="UserType" class="text-danger"></span>
+                        </div> *@
+                        <div class="form-group" id="userTypeContainer">
+                            <label asp-for="UserType"></label>
+
+                            <select asp-for="UserType"
+                                    class="form-control"
+                                    id="userTypeSelect">
+                                <option value="">-- Select User Type --</option>
+                                <option value="ISGS">ISGS</option>
+                                <option value="RE">RE</option>
+                                <option value="IPP">IPP</option>
+                                <option value="State_Gen">State_Gen</option>
+                                <option value="Bulk_Consumer">Bulk Consumer</option>
+                            </select>
+
+                            <span asp-validation-for="UserType"
+                                  class="text-danger"></span>
                         </div>
                         
                         <div class="form-group" id="stateField" style="display: none;">
@@ -81,7 +109,7 @@
     </div>
 </div>
 
-
+@* 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
     <script>
@@ -100,5 +128,58 @@
                 $('#stateField').show();
             }
         });
+    </script>
+} *@
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+
+        function handleUserWorkflow() {
+
+            var isSldc = $('#IsSldc').is(':checked');
+            var userType = $('#userTypeSelect').val();
+
+            if (isSldc) {
+
+                // Hide User Type section
+                $('#userTypeContainer').hide();
+
+                // Set default value
+                $('#userTypeSelect').val('State_Gen');
+
+                // Show State field
+                $('#stateField').show();
+            }
+            else {
+
+                // Show User Type dropdown
+                $('#userTypeContainer').show();
+
+                // Show state only for State_Gen
+                if ($('#userTypeSelect').val() === 'State_Gen') {
+                    $('#stateField').show();
+                }
+                else {
+                    $('#stateField').hide();
+                    $('#State').val('');
+                }
+            }
+        }
+
+        $(document).ready(function () {
+
+            handleUserWorkflow();
+
+            $('#IsSldc').change(function () {
+                handleUserWorkflow();
+            });
+
+            $('#userTypeSelect').change(function () {
+                handleUserWorkflow();
+            });
+        });
+
     </script>
 }

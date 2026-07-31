@@ -21,6 +21,8 @@ namespace CoalShortagePortal.Core.Entities
         [MaxLength(50)]
         public string DisplayName { get; set; }
 
+        public bool IsSldc { get; set; }
+
         [MaxLength(100)]
         public string State { get; set; } // Only for State_Gen
 
