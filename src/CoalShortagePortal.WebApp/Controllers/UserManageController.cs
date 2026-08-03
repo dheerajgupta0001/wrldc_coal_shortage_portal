@@ -6,6 +6,7 @@ using CoalShortagePortal.WebApp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -54,10 +55,26 @@ namespace CoalShortagePortal.WebApp.Controllers
             return View(vm);
         }
 
+        //[HttpGet]
+        //public IActionResult Create()
+        //{
+        //    return View();
+        //}
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            return View();
+            var vm = new UserCreateVM();
+
+            vm.States = await _context.WrStates
+                .OrderBy(x => x.StateName)
+                .Select(x => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                {
+                    Value = x.StateName,
+                    Text = x.StateName
+                })
+                .ToListAsync();
+
+            return View(vm);
         }
 
         [HttpPost]
@@ -70,6 +87,14 @@ namespace CoalShortagePortal.WebApp.Controllers
                 if (vm.UserType == "State_Gen" && string.IsNullOrWhiteSpace(vm.State))
                 {
                     ModelState.AddModelError("State", "State is required for State_Gen user type.");
+                    vm.States = await _context.WrStates
+                        .OrderBy(x => x.StateName)
+                        .Select(x => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                        {
+                            Value = x.StateName,
+                            Text = x.StateName
+                        })
+                        .ToListAsync();
                     return View(vm);
                 }
 
@@ -118,6 +143,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                             UserType = vm.UserType,
                             DisplayName = vm.DisplayName,
                             State = vm.UserType == "State_Gen" ? vm.State : null,
+                            IsSldc = vm.IsSldc,
                             CreatedById = currentUserId,
                             Created = currentTime,
                             LastModifiedById = currentUserId,
@@ -166,6 +192,14 @@ namespace CoalShortagePortal.WebApp.Controllers
                 AddErrors(result);
             }
 
+            vm.States = await _context.WrStates
+                .OrderBy(x => x.StateName)
+                .Select(x => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                {
+                    Value = x.StateName,
+                    Text = x.StateName
+                })
+                .ToListAsync();
             return View(vm);
         }
 
@@ -193,9 +227,21 @@ namespace CoalShortagePortal.WebApp.Controllers
                 PhoneNumber = user.PhoneNumber,
                 UserType = userDetails?.UserType,
                 DisplayName = userDetails?.DisplayName,
-                State = userDetails?.State
+                State = userDetails?.State,
+                IsSldc = userDetails?.IsSldc ?? false
             };
+
+            vm.States = await _context.WrStates
+                .OrderBy(x => x.StateName)
+                .Select(x => new SelectListItem
+                {
+                    Value = x.StateName,
+                    Text = x.StateName
+                })
+                .ToListAsync();
+
             return View(vm);
+
         }
 
         [HttpPost]
@@ -213,6 +259,14 @@ namespace CoalShortagePortal.WebApp.Controllers
                 if (vm.UserType == "State_Gen" && string.IsNullOrWhiteSpace(vm.State))
                 {
                     ModelState.AddModelError("State", "State is required for State_Gen user type.");
+                    vm.States = await _context.WrStates
+                        .OrderBy(x => x.StateName)
+                        .Select(x => new SelectListItem
+                        {
+                            Value = x.StateName,
+                            Text = x.StateName
+                        })
+                        .ToListAsync();
                     return View(vm);
                 }
 
@@ -318,6 +372,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                         userDetails.UserType = vm.UserType;
                         userDetails.DisplayName = vm.DisplayName;
                         userDetails.State = vm.UserType == "State_Gen" ? vm.State : null;
+                        userDetails.IsSldc = vm.IsSldc;
                         userDetails.LastModifiedById = currentUserId;
                         userDetails.LastModified = DateTime.UtcNow;
                     }
@@ -330,6 +385,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                             UserType = vm.UserType,
                             DisplayName = vm.DisplayName,
                             State = vm.UserType == "State_Gen" ? vm.State : null,
+                            IsSldc = vm.IsSldc,
                             CreatedById = currentUserId,
                             Created = DateTime.UtcNow,
                             LastModifiedById = currentUserId,
@@ -356,6 +412,14 @@ namespace CoalShortagePortal.WebApp.Controllers
                 AddErrors(identityErrors);
             }
 
+            vm.States = await _context.WrStates
+                .OrderBy(x => x.StateName)
+                .Select(x => new SelectListItem
+                {
+                    Value = x.StateName,
+                    Text = x.StateName
+                })
+                .ToListAsync();
             return View(vm);
         }
 

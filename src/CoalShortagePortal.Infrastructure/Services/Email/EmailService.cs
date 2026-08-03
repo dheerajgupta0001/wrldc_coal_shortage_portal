@@ -136,7 +136,7 @@ namespace CoalShortagePortal.Infrastructure.Services.Email
 
         public async Task SendOtpEmailAsync(string toEmail, string otp)
         {
-            var subject = "Your OTP for Coal Shortage Portal";
+            var subject = "Your OTP for WRLDC Data Collection Portal";
             var message = $@"
                 <html>
                 <body style='font-family: Arial, sans-serif;'>

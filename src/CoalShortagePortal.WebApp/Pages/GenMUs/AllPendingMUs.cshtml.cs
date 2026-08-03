@@ -137,10 +137,19 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         // ============================================================
         public async Task<IActionResult> OnGetAsync()
         {
-            if (User.Identity.Name?.ToLower() != "admin")
+            //if (User.Identity.Name?.ToLower() != "admin")
+            //{
+            //    TempData["ErrorMessage"] =
+            //        "Access denied. This page is only accessible to administrators.";
+            //    return RedirectToPage("/GenMUs/Index");
+            //}
+            var currentUser = await GetCurrentUserInfo();
+
+            if (!currentUser.IsAdmin && !currentUser.IsSldc)
             {
                 TempData["ErrorMessage"] =
-                    "Access denied. This page is only accessible to administrators.";
+                    "Access denied.";
+
                 return RedirectToPage("/GenMUs/Index");
             }
 
@@ -162,10 +171,20 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         // ============================================================
         // GET: Toggle Edit
         // ============================================================
-        public IActionResult OnGetToggleEdit(string stationName)
+        //public IActionResult OnGetToggleEdit(string stationName)
+        public async Task<IActionResult> OnGetToggleEdit(string stationName)
         {
-            if (User.Identity.Name?.ToLower() != "admin")
+            //if (User.Identity.Name?.ToLower() != "admin")
+            //    return RedirectToPage("/GenMUs/Index");
+            var currentUser = await GetCurrentUserInfo();
+
+            if (!currentUser.IsAdmin && !currentUser.IsSldc)
+            {
+                TempData["ErrorMessage"] =
+                    "Access denied.";
+
                 return RedirectToPage("/GenMUs/Index");
+            }
 
             if (string.IsNullOrWhiteSpace(stationName))
                 return RedirectToPage("./AllPendingMUs");
@@ -193,10 +212,19 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         // ============================================================
         public async Task<IActionResult> OnPostAsync()
         {
-            if (User.Identity.Name?.ToLower() != "admin")
+            //if (User.Identity.Name?.ToLower() != "admin")
+            //{
+            //    TempData["ErrorMessage"] = "Access denied.";
+            //    return RedirectToPage("/Index");
+            //}
+            var currentUser = await GetCurrentUserInfo();
+
+            if (!currentUser.IsAdmin && !currentUser.IsSldc)
             {
-                TempData["ErrorMessage"] = "Access denied.";
-                return RedirectToPage("/Index");
+                TempData["ErrorMessage"] =
+                    "Access denied.";
+
+                return RedirectToPage("/GenMUs/Index");
             }
 
             YesterdayDate = DateTime.Now.AddDays(-1).Date;
@@ -385,10 +413,19 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         // ============================================================
         public async Task<IActionResult> OnPostDeleteAsync(string stationName)
         {
-            if (User.Identity.Name?.ToLower() != "admin")
+            //if (User.Identity.Name?.ToLower() != "admin")
+            //{
+            //    TempData["ErrorMessage"] = "Access denied.";
+            //    return RedirectToPage("/Index");
+            //}
+            var currentUser = await GetCurrentUserInfo();
+
+            if (!currentUser.IsAdmin && !currentUser.IsSldc)
             {
-                TempData["ErrorMessage"] = "Access denied.";
-                return RedirectToPage("/Index");
+                TempData["ErrorMessage"] =
+                    "Access denied.";
+
+                return RedirectToPage("/GenMUs/Index");
             }
 
             if (string.IsNullOrWhiteSpace(stationName))
@@ -542,9 +579,34 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         // ============================================================
         private async Task LoadPageDataAsync()
         {
-            var allUsers = await _userManager.Users
-                .Where(u => !u.UserName.StartsWith("wr_"))
-                .ToListAsync();
+            //var allUsers = await _userManager.Users
+            //    .Where(u => !u.UserName.StartsWith("wr_"))
+            //    .ToListAsync();
+
+            var currentUser = await GetCurrentUserInfo();
+
+            List<IdentityUser> allUsers;
+
+            if (currentUser.IsAdmin)
+            {
+                allUsers = await _userManager.Users
+                    .Where(u => !u.UserName.StartsWith("wr_"))
+                    .ToListAsync();
+            }
+            else
+            {
+                var allowedUserIds = await _context.UserDetails
+                    .Where(x =>
+                        x.UserType == "State_Gen"
+                        && x.State == currentUser.State
+                        && !x.IsSldc)
+                    .Select(x => x.UserId)
+                    .ToListAsync();
+
+                allUsers = await _userManager.Users
+                    .Where(x => allowedUserIds.Contains(x.Id))
+                    .ToListAsync();
+            }
 
             var yesterdaySubmissions = await _context.DailyMUsDatas
                 .Where(d => d.DataDate.Date == YesterdayDate
@@ -893,6 +955,30 @@ ORDER BY gs.GENERATING_STATION_NAME";
             cell.Style.Font.Color.SetColor(Color.White);
             cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             cell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+        }
+
+        private async Task<(bool IsAdmin, bool IsSldc, string State)> GetCurrentUserInfo()
+        {
+            var user = await _userManager.GetUserAsync(User);
+
+            if (user == null)
+                return (false, false, null);
+
+            if (user.UserName.Equals("admin",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                return (true, false, null);
+            }
+
+            var userDetails = await _context.UserDetails
+                .FirstOrDefaultAsync(x => x.UserId == user.Id);
+
+            if (userDetails?.IsSldc == true)
+            {
+                return (false, true, userDetails.State);
+            }
+
+            return (false, false, null);
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace CoalShortagePortal.WebApp.Models
 {
@@ -29,7 +31,13 @@ namespace CoalShortagePortal.WebApp.Models
         [Display(Name = "Display Name")]
         public string DisplayName { get; set; }
 
+        [Display(Name = "Is SLDC")]
+        public bool IsSldc { get; set; }
+
         [Display(Name = "State")]
         public string State { get; set; }
+        // NEW
+        public List<SelectListItem> States { get; set; }
+            = new List<SelectListItem>();
     }
 }

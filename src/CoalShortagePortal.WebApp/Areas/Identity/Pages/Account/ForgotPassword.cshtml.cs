@@ -74,8 +74,8 @@ namespace CoalShortagePortal.WebApp.Areas.Identity.Pages.Account
 
                 await _emailSender.SendEmailAsync(
                     Input.Email,
-                    "Reset Password for Coal Shortage Data Entry Portal",
-                    $"Hi, Please reset your Coal Shortage Data Entry Portal password by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                    "Reset Password for WRLDC Data Collection Portal",
+                    $"Hi, Please reset your WRLDC Data Collection Portal password by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
 
                 return RedirectToPage("./ForgotPasswordConfirmation");
             }

@@ -234,7 +234,7 @@
 
 <div class="text-center">
     <h2>Welcome</h2>
-    <p>Please enter coal shortage related information in this portal for reporting purposes of WRLDC</p>
+    <p>Please enter relevent information in this portal for reporting purposes of WRLDC</p>
 </div>
 
 
@@ -242,6 +242,14 @@
 {
     <!-- Main Action Cards -->
     <div class="action-cards">
+        <!-- Daily MUs Card -->
+        <div class="action-card">
+            <h3>Daily MUs</h3>
+            <p>Record daily megawatt unit generation and consumption data</p>
+            <a asp-page="/GenMUs/Index">
+                Enter Daily MUs <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
         <!-- Coal Data Card -->
         <div class="action-card">
             <h3>Coal Data</h3>
@@ -257,15 +265,6 @@
             <p>Submit expected revival time for generators and units</p>
             <a asp-page="/UnrevGens/Index">
                 Enter Revival Time <i class="fas fa-arrow-right ms-2"></i>
-            </a>
-        </div>
-
-        <!-- Daily MUs Card -->
-        <div class="action-card">
-            <h3>Daily MUs</h3>
-            <p>Record daily megawatt unit generation and consumption data</p>
-            <a asp-page="/GenMUs/Index">
-                Enter Daily MUs <i class="fas fa-arrow-right ms-2"></i>
             </a>
         </div>
     </div>

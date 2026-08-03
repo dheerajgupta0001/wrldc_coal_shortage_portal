@@ -537,39 +537,7 @@
                 </small>
             </div>
 
-            <!-- Export Button -->
-            @*<div class="d-flex flex-column align-items-end mt-3 mb-5">
-                <a asp-page-handler="ExportExcel"
-                   class="btn btn-export-active btn-lg">
-                    <i class="fas fa-file-excel mr-2"></i>
-                    Export Yesterday's Data to Excel
-                </a>
-                 @if (allSubmitted)
-                {
-                    <a asp-page-handler="ExportExcel"
-                       class="btn btn-export-active btn-lg">
-                        <i class="fas fa-file-excel mr-2"></i>
-                        Export Yesterday's Data to Excel
-                    </a>
-                    <small class="text-success mt-2">
-                        <i class="fas fa-check-circle mr-1"></i>
-                        All @submittedCount station(s) submitted — export is ready!
-                    </small>
-                }
-                else
-                {
-                    <button class="btn btn-export-locked btn-lg" disabled
-                            title="All generators must submit before export">
-                        <i class="fas fa-lock mr-2"></i>
-                        Export Yesterday's Data to Excel
-                    </button>
-                    <small class="text-danger mt-2">
-                        <i class="fas fa-hourglass-half mr-1"></i>
-                        @pendingCount station(s) still pending —
-                        export unlocks when all submit
-                    </small>
-                } 
-            </div>*@
+
         </div>
     </div>
 </div>
