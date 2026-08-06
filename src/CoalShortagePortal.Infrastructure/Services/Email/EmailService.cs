@@ -141,7 +141,7 @@ namespace CoalShortagePortal.Infrastructure.Services.Email
                 <html>
                 <body style='font-family: Arial, sans-serif;'>
                     <div style='max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;'>
-                        <h2 style='color: #333; text-align: center;'>Coal Shortage Portal</h2>
+                        <h2 style='color: #333; text-align: center;'>WRLDC Data Collection Portal Login OTP</h2>
                         <p style='font-size: 16px;'>Hello,</p>
                         <p style='font-size: 16px;'>Your One-Time Password (OTP) for login is:</p>
                         <div style='text-align: center; margin: 30px 0;'>

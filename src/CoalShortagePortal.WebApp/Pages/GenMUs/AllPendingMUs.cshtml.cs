@@ -11,11 +11,13 @@ using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using Oracle.ManagedDataAccess.Client;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.Intrinsics.X86;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -130,6 +132,14 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             public int? Fuel { get; set; }
             public string FuelType { get; set; }
             public string CellReference { get; set; }
+        }
+
+        public class StateOwnedStationModel
+        {
+            public string StateName { get; set; }
+            public string Owners { get; set; }
+            public string StationName { get; set; }
+            public string Classification { get; set; }
         }
 
         // ============================================================
@@ -595,17 +605,33 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             }
             else
             {
-                var allowedUserIds = await _context.UserDetails
-                    .Where(x =>
-                        x.UserType == "State_Gen"
-                        && x.State == currentUser.State
-                        && !x.IsSldc)
-                    .Select(x => x.UserId)
+                //var allowedUserIds = await _context.UserDetails
+                //    .Where(x =>
+                //        x.UserType == "State_Gen"
+                //        && x.State == currentUser.State
+                //        && !x.IsSldc)
+                //    .Select(x => x.UserId)
+                //    .ToListAsync();
+
+                //allUsers = await _userManager.Users
+                //    .Where(x => allowedUserIds.Contains(x.Id))
+                //    .ToListAsync();
+
+                var allowedStations = await GetSldcStationsAsync(currentUser.State);
+
+                var allowedStationKeys = allowedStations
+                    .Select(x => NormalizeStationName(x))
+                    .ToHashSet();
+
+                var portalUsers = await _userManager.Users
+                    .Where(u => !u.UserName.StartsWith("wr_"))
                     .ToListAsync();
 
-                allUsers = await _userManager.Users
-                    .Where(x => allowedUserIds.Contains(x.Id))
-                    .ToListAsync();
+                allUsers = portalUsers
+                    .Where(u =>
+                        allowedStationKeys.Contains(
+                            NormalizeStationName(u.UserName)))
+                    .ToList();
             }
 
             var yesterdaySubmissions = await _context.DailyMUsDatas
@@ -880,22 +906,22 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 _configuration.GetConnectionString("ReportingConnection");
 
             const string query = @"
-SELECT
-    gs.ID,
-    gs.GENERATING_STATION_NAME,
-    gst.NAME AS STATION_TYPE_NAME,
-    gs.FUEL,
-    f.TYPE AS FUEL_TYPE,
-    scd.CELL_REFERENCE
-FROM REPORTING_WEB_UI_UAT.GENERATING_STATION gs
-INNER JOIN REPORTING_WEB_UI_UAT.SCADA_CONFIG_DETAILS scd
-    ON scd.ELMENT_ID = gs.ID
-LEFT JOIN REPORTING_WEB_UI_UAT.FUEL f
-    ON f.ID = gs.FUEL
-LEFT JOIN REPORTING_WEB_UI_UAT.GENERATING_STATION_TYPE gst
-    ON gst.ID = gs.STATION_TYPE
-WHERE scd.SCADA_FILE_NAME_ID = 7
-ORDER BY gs.GENERATING_STATION_NAME";
+                                SELECT
+                                    gs.ID,
+                                    gs.GENERATING_STATION_NAME,
+                                    gst.NAME AS STATION_TYPE_NAME,
+                                    gs.FUEL,
+                                    f.TYPE AS FUEL_TYPE,
+                                    scd.CELL_REFERENCE
+                                FROM REPORTING_WEB_UI_UAT.GENERATING_STATION gs
+                                INNER JOIN REPORTING_WEB_UI_UAT.SCADA_CONFIG_DETAILS scd
+                                    ON scd.ELMENT_ID = gs.ID
+                                LEFT JOIN REPORTING_WEB_UI_UAT.FUEL f
+                                    ON f.ID = gs.FUEL
+                                LEFT JOIN REPORTING_WEB_UI_UAT.GENERATING_STATION_TYPE gst
+                                    ON gst.ID = gs.STATION_TYPE
+                                WHERE scd.SCADA_FILE_NAME_ID = 7
+                                ORDER BY gs.GENERATING_STATION_NAME";
 
             using var connection = new OracleConnection(connectionString);
             await connection.OpenAsync();
@@ -979,6 +1005,81 @@ ORDER BY gs.GENERATING_STATION_NAME";
             }
 
             return (false, false, null);
+        }
+        private async Task<List<string>> GetSldcStationsAsync(string state)
+        {
+            var stations = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(state))
+                return stations;
+
+            var connectionString =
+                _configuration.GetConnectionString("ReportingConnection");
+
+            const string query = @"
+                                SELECT DISTINCT
+                                    gs.GENERATING_STATION_NAME AS STATION_NAME
+                                FROM reporting_web_ui_uat.GENERATING_STATION gs
+                                LEFT JOIN reporting_web_ui_uat.CLASSIFICATION_MASTER cm
+                                    ON cm.ID = gs.CLASSIFICATION_ID
+                                LEFT JOIN reporting_web_ui_uat.SRLDC_STATE_MASTER ssm
+                                    ON ssm.ID = gs.LOCATION_ID
+                                LEFT JOIN
+                                (
+                                    SELECT
+                                        LISTAGG(own.owner_name, ',') WITHIN GROUP
+                                        (
+                                            ORDER BY own.owner_name
+                                        ) AS owners,
+                                        parent_entity_attribute_id AS element_id
+                                    FROM reporting_web_ui_uat.entity_entity_reln ent_reln
+                                    LEFT JOIN reporting_web_ui_uat.owner own
+                                        ON own.id = ent_reln.child_entity_attribute_id
+                                    WHERE ent_reln.child_entity = 'Owner'
+                                      AND ent_reln.parent_entity = 'GENERATING_STATION'
+                                      AND ent_reln.child_entity_attribute = 'OwnerId'
+                                      AND ent_reln.parent_entity_attribute = 'Owner'
+                                    GROUP BY parent_entity_attribute_id
+                                ) owner_details
+                                    ON owner_details.element_id = gs.ID
+                                WHERE UPPER(TRIM(ssm.FULL_NAME)) = :state_name
+                                  AND UPPER(TRIM(cm.CLASSIFICATION)) = 'STATE_OWNED'
+                                  AND gs.GENERATING_STATION_NAME IS NOT NULL
+                                ORDER BY gs.GENERATING_STATION_NAME";
+
+            using var connection = new OracleConnection(connectionString);
+            await connection.OpenAsync();
+
+            using var command = new OracleCommand(query, connection);
+            command.BindByName = true;
+
+            command.Parameters.Add(
+                new OracleParameter(
+                    "state_name",
+                    state.Trim().ToUpperInvariant()
+                )
+            );
+
+            using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                if (reader["STATION_NAME"] != DBNull.Value)
+                {
+                    var stationName = reader["STATION_NAME"]
+                        .ToString()
+                        .Trim();
+
+                    if (!string.IsNullOrWhiteSpace(stationName))
+                    {
+                        stations.Add(stationName);
+                    }
+                }
+            }
+
+            return stations
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
     }
 }
