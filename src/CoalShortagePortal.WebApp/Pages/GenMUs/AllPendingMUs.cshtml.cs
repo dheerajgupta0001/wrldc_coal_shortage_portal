@@ -199,6 +199,24 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             if (string.IsNullOrWhiteSpace(stationName))
                 return RedirectToPage("./AllPendingMUs");
 
+            if (currentUser.IsSldc)
+            {
+                var allowedStations =
+                    await GetStateOwnedStationsAsync(currentUser.State);
+
+                var allowedStationKeys = allowedStations
+                    .Select(x => NormalizeStationName(x.StationName))
+                    .ToHashSet();
+
+                if (!allowedStationKeys.Contains(NormalizeStationName(stationName)))
+                {
+                    TempData["ErrorMessage"] =
+                        "You are not authorised to edit this station.";
+
+                    return RedirectToPage("./AllPendingMUs");
+                }
+            }
+
             var editing = new List<string>();
 
             if (TempData["EditingStations"] is string existing
@@ -247,6 +265,22 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 .Where(e => e.DailyMUs.HasValue && e.DailyMUs > 0)
                 .ToList() ?? new List<MUEntryModel>();
 
+            if (currentUser.IsSldc)
+            {
+                var allowedStations =
+                    await GetStateOwnedStationsAsync(currentUser.State);
+
+                var allowedStationKeys = allowedStations
+                    .Select(x => NormalizeStationName(x.StationName))
+                    .ToHashSet();
+
+                entriesToProcess = entriesToProcess
+                    .Where(x =>
+                        allowedStationKeys.Contains(
+                            NormalizeStationName(x.StationName)))
+                    .ToList();
+            }
+
             if (!entriesToProcess.Any())
             {
                 TempData["ErrorMessage"] =
@@ -260,23 +294,45 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
             {
                 try
                 {
-                    var stationUser = await _userManager
-                        .FindByNameAsync(entry.StationName);
+                    //var stationUser = await _userManager.FindByNameAsync(entry.StationName);
 
-                    if (stationUser == null)
+                    //if (stationUser == null)
+                    //{
+                    //    _logger.LogWarning(
+                    //        "Invalid station name submitted by admin: {Station}",
+                    //        entry.StationName);
+
+                    //    errorMessages.Add("Invalid station: record skipped.");
+                    //    continue;
+                    //}
+
+                    //var dbUserType = await _context.UserDetails
+                    //    .Where(ud => ud.UserId == stationUser.Id)
+                    //    .Select(ud => ud.UserType)
+                    //    .FirstOrDefaultAsync() ?? "";
+
+                    //bool isScheduleUser =
+                    //    dbUserType == "ISGS" || dbUserType == "IPP";
+                    string dbUserType = entry.UserType ?? "";
+
+                    if (currentUser.IsAdmin)
                     {
-                        _logger.LogWarning(
-                            "Invalid station name submitted by admin: {Station}",
-                            entry.StationName);
+                        var stationUser = await _userManager
+                            .FindByNameAsync(entry.StationName);
 
-                        errorMessages.Add("Invalid station: record skipped.");
-                        continue;
+                        if (stationUser != null)
+                        {
+                            dbUserType = await _context.UserDetails
+                                .Where(ud => ud.UserId == stationUser.Id)
+                                .Select(ud => ud.UserType)
+                                .FirstOrDefaultAsync() ?? "";
+                        }
                     }
 
-                    var dbUserType = await _context.UserDetails
-                        .Where(ud => ud.UserId == stationUser.Id)
-                        .Select(ud => ud.UserType)
-                        .FirstOrDefaultAsync() ?? "";
+                    if (currentUser.IsSldc)
+                    {
+                        dbUserType = "State_Gen";
+                    }
 
                     bool isScheduleUser =
                         dbUserType == "ISGS" || dbUserType == "IPP";
@@ -451,17 +507,45 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 return RedirectToPage();
             }
 
-            var stationUser = await _userManager.FindByNameAsync(stationName);
+            //var stationUser = await _userManager.FindByNameAsync(stationName);
 
-            if (stationUser == null)
+            //if (stationUser == null)
+            //{
+            //    _logger.LogWarning(
+            //        "Delete attempt for non-existent station: {Station} by {Admin}",
+            //        stationName,
+            //        User.Identity.Name);
+
+            //    TempData["ErrorMessage"] = "Station not found.";
+            //    return RedirectToPage();
+            //}
+            if (currentUser.IsAdmin)
             {
-                _logger.LogWarning(
-                    "Delete attempt for non-existent station: {Station} by {Admin}",
-                    stationName,
-                    User.Identity.Name);
+                var stationUser = await _userManager.FindByNameAsync(stationName);
 
-                TempData["ErrorMessage"] = "Station not found.";
-                return RedirectToPage();
+                if (stationUser == null)
+                {
+                    TempData["ErrorMessage"] = "Station not found.";
+                    return RedirectToPage();
+                }
+            }
+
+            if (currentUser.IsSldc)
+            {
+                var allowedStations =
+                    await GetStateOwnedStationsAsync(currentUser.State);
+
+                var allowedStationKeys = allowedStations
+                    .Select(x => NormalizeStationName(x.StationName))
+                    .ToHashSet();
+
+                if (!allowedStationKeys.Contains(NormalizeStationName(stationName)))
+                {
+                    TempData["ErrorMessage"] =
+                        "You are not authorised for this station.";
+
+                    return RedirectToPage();
+                }
             }
 
             YesterdayDate = DateTime.Now.AddDays(-1).Date;
@@ -499,10 +583,21 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         [Authorize]
         public async Task<IActionResult> OnGetExportExBusExcelAsync()
         {
-            if (User.Identity.Name?.ToLower() != "admin")
+            //if (User.Identity.Name?.ToLower() != "admin")
+            //{
+            //    _logger.LogWarning(
+            //        "Unauthorized ExBus export attempt by {User}",
+            //        User.Identity.Name);
+
+            //    TempData["ErrorMessage"] = "Access denied.";
+            //    return RedirectToPage();
+            //}
+            var currentUser = await GetCurrentUserInfo();
+
+            if (!currentUser.IsAdmin)
             {
                 _logger.LogWarning(
-                    "Unauthorized ExBus export attempt by {User}",
+                    "Unauthorized GenMU export attempt by {User}",
                     User.Identity.Name);
 
                 TempData["ErrorMessage"] = "Access denied.";
@@ -539,10 +634,21 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         [Authorize]
         public async Task<IActionResult> OnGetExportGenMuExcelAsync()
         {
-            if (User.Identity.Name?.ToLower() != "admin")
+            //if (User.Identity.Name?.ToLower() != "admin")
+            //{
+            //    _logger.LogWarning(
+            //        "Unauthorized GenMU export attempt by {User}",
+            //        User.Identity.Name);
+
+            //    TempData["ErrorMessage"] = "Access denied.";
+            //    return RedirectToPage();
+            //}
+            var currentUser = await GetCurrentUserInfo();
+
+            if (!currentUser.IsAdmin)
             {
                 _logger.LogWarning(
-                    "Unauthorized GenMU export attempt by {User}",
+                    "Unauthorized ExBus export attempt by {User}",
                     User.Identity.Name);
 
                 TempData["ErrorMessage"] = "Access denied.";
@@ -589,97 +695,98 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
         // ============================================================
         private async Task LoadPageDataAsync()
         {
-            //var allUsers = await _userManager.Users
-            //    .Where(u => !u.UserName.StartsWith("wr_"))
-            //    .ToListAsync();
-
             var currentUser = await GetCurrentUserInfo();
-
-            List<IdentityUser> allUsers;
-
-            if (currentUser.IsAdmin)
-            {
-                allUsers = await _userManager.Users
-                    .Where(u => !u.UserName.StartsWith("wr_"))
-                    .ToListAsync();
-            }
-            else
-            {
-                //var allowedUserIds = await _context.UserDetails
-                //    .Where(x =>
-                //        x.UserType == "State_Gen"
-                //        && x.State == currentUser.State
-                //        && !x.IsSldc)
-                //    .Select(x => x.UserId)
-                //    .ToListAsync();
-
-                //allUsers = await _userManager.Users
-                //    .Where(x => allowedUserIds.Contains(x.Id))
-                //    .ToListAsync();
-
-                var allowedStations = await GetSldcStationsAsync(currentUser.State);
-
-                var allowedStationKeys = allowedStations
-                    .Select(x => NormalizeStationName(x))
-                    .ToHashSet();
-
-                var portalUsers = await _userManager.Users
-                    .Where(u => !u.UserName.StartsWith("wr_"))
-                    .ToListAsync();
-
-                allUsers = portalUsers
-                    .Where(u =>
-                        allowedStationKeys.Contains(
-                            NormalizeStationName(u.UserName)))
-                    .ToList();
-            }
 
             var yesterdaySubmissions = await _context.DailyMUsDatas
                 .Where(d => d.DataDate.Date == YesterdayDate
                          && !d.StationName.StartsWith("wr_"))
                 .ToListAsync();
 
-            var allUserIds = allUsers.Select(u => u.Id).ToList();
-
-            var userDetailsMap = await _context.UserDetails
-                .Where(ud => allUserIds.Contains(ud.UserId))
-                .ToDictionaryAsync(ud => ud.UserId, ud => ud.UserType);
-
             PendingGenerators = new List<PendingMUViewModel>();
 
-            foreach (var user in allUsers)
+            if (currentUser.IsAdmin)
             {
-                if (user.UserName?.ToLower() == "admin")
-                    continue;
+                var allUsers = await _userManager.Users
+                    .Where(u => !u.UserName.StartsWith("wr_"))
+                    .ToListAsync();
 
-                var submission = yesterdaySubmissions
-                    .FirstOrDefault(s => s.StationName == user.UserName);
+                var allUserIds = allUsers.Select(u => u.Id).ToList();
 
-                userDetailsMap.TryGetValue(user.Id, out var userType);
+                var userDetailsMap = await _context.UserDetails
+                    .Where(ud => allUserIds.Contains(ud.UserId))
+                    .ToDictionaryAsync(ud => ud.UserId, ud => ud.UserType);
 
-                PendingGenerators.Add(new PendingMUViewModel
+                foreach (var user in allUsers)
                 {
-                    StationName = user.UserName,
-                    Email = user.Email,
-                    HasSubmitted = submission != null,
-                    UserType = userType ?? "",
+                    if (user.UserName?.ToLower() == "admin")
+                        continue;
 
-                    ExistingMUs = submission?.DailyMUs,
-                    ExistingScheduleMUs = submission?.ScheduleMUs,
-                    ExistingExBus = submission?.ExBus,
+                    var submission = yesterdaySubmissions
+                        .FirstOrDefault(s => s.StationName == user.UserName);
 
-                    ExistingPeakMW = submission?.PeakMW,
-                    ExistingPeakMWTime = submission?.PeakMWTime,
+                    userDetailsMap.TryGetValue(user.Id, out var userType);
 
-                    ExistingOffPeakMW = submission?.OffPeakMW,
-                    ExistingOffPeakMWTime = submission?.OffPeakMWTime,
+                    PendingGenerators.Add(new PendingMUViewModel
+                    {
+                        StationName = user.UserName,
+                        Email = user.Email,
+                        HasSubmitted = submission != null,
+                        UserType = userType ?? "",
 
-                    ExistingDayPeakMW = submission?.DayPeakMW,
-                    ExistingDayPeakMWTime = submission?.DayPeakMWTime,
+                        ExistingMUs = submission?.DailyMUs,
+                        ExistingScheduleMUs = submission?.ScheduleMUs,
+                        ExistingExBus = submission?.ExBus,
 
-                    ExistingMinGeneration = submission?.MinGeneration,
-                    ExistingMinGenerationTime = submission?.MinGenerationTime
-                });
+                        ExistingPeakMW = submission?.PeakMW,
+                        ExistingPeakMWTime = submission?.PeakMWTime,
+
+                        ExistingOffPeakMW = submission?.OffPeakMW,
+                        ExistingOffPeakMWTime = submission?.OffPeakMWTime,
+
+                        ExistingDayPeakMW = submission?.DayPeakMW,
+                        ExistingDayPeakMWTime = submission?.DayPeakMWTime,
+
+                        ExistingMinGeneration = submission?.MinGeneration,
+                        ExistingMinGenerationTime = submission?.MinGenerationTime
+                    });
+                }
+            }
+            else if (currentUser.IsSldc)
+            {
+                var stateOwnedStations =
+                    await GetStateOwnedStationsAsync(currentUser.State);
+
+                foreach (var station in stateOwnedStations)
+                {
+                    var submission = yesterdaySubmissions
+                        .FirstOrDefault(s =>
+                            NormalizeStationName(s.StationName)
+                            == NormalizeStationName(station.StationName));
+
+                    PendingGenerators.Add(new PendingMUViewModel
+                    {
+                        StationName = station.StationName,
+                        Email = "",
+                        HasSubmitted = submission != null,
+                        UserType = "State_Gen",
+
+                        ExistingMUs = submission?.DailyMUs,
+                        ExistingScheduleMUs = submission?.ScheduleMUs,
+                        ExistingExBus = submission?.ExBus,
+
+                        ExistingPeakMW = submission?.PeakMW,
+                        ExistingPeakMWTime = submission?.PeakMWTime,
+
+                        ExistingOffPeakMW = submission?.OffPeakMW,
+                        ExistingOffPeakMWTime = submission?.OffPeakMWTime,
+
+                        ExistingDayPeakMW = submission?.DayPeakMW,
+                        ExistingDayPeakMWTime = submission?.DayPeakMWTime,
+
+                        ExistingMinGeneration = submission?.MinGeneration,
+                        ExistingMinGenerationTime = submission?.MinGenerationTime
+                    });
+                }
             }
 
             PendingGenerators = PendingGenerators
@@ -968,19 +1075,25 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
         public async Task<IActionResult> OnGetRunExportAsync()
         {
+            var currentUser = await GetCurrentUserInfo();
+
+            if (!currentUser.IsAdmin)
+            {
+                _logger.LogWarning(
+                    "Unauthorized export attempt by {User}",
+                    User.Identity?.Name);
+
+                TempData["ErrorMessage"] = "Access denied.";
+                return RedirectToPage();
+            }
+
             await _exportService.GenerateAndUploadFilesAsync();
 
-            return Content("Export Completed");
-        }
+            _logger.LogInformation(
+                "Manual export triggered by {User}",
+                User.Identity?.Name);
 
-        private static void StyleLabelCell(ExcelRange cell)
-        {
-            cell.Style.Font.Bold = true;
-            cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            cell.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(30, 30, 60));
-            cell.Style.Font.Color.SetColor(Color.White);
-            cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            cell.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+            return Content("Export Completed");
         }
 
         private async Task<(bool IsAdmin, bool IsSldc, string State)> GetCurrentUserInfo()
@@ -1006,9 +1119,10 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
             return (false, false, null);
         }
-        private async Task<List<string>> GetSldcStationsAsync(string state)
+
+        private async Task<List<StateOwnedStationModel>> GetStateOwnedStationsAsync(string state)
         {
-            var stations = new List<string>();
+            var stations = new List<StateOwnedStationModel>();
 
             if (string.IsNullOrWhiteSpace(state))
                 return stations;
@@ -1017,8 +1131,11 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
                 _configuration.GetConnectionString("ReportingConnection");
 
             const string query = @"
-                                SELECT DISTINCT
-                                    gs.GENERATING_STATION_NAME AS STATION_NAME
+                                SELECT
+                                    ssm.FULL_NAME AS state_name,
+                                    owner_details.owners,
+                                    gs.GENERATING_STATION_NAME AS station_name,
+                                    cm.CLASSIFICATION
                                 FROM reporting_web_ui_uat.GENERATING_STATION gs
                                 LEFT JOIN reporting_web_ui_uat.CLASSIFICATION_MASTER cm
                                     ON cm.ID = gs.CLASSIFICATION_ID
@@ -1064,21 +1181,30 @@ namespace CoalShortagePortal.WebApp.Pages.GenMUs
 
             while (await reader.ReadAsync())
             {
-                if (reader["STATION_NAME"] != DBNull.Value)
+                stations.Add(new StateOwnedStationModel
                 {
-                    var stationName = reader["STATION_NAME"]
-                        .ToString()
-                        .Trim();
+                    StateName = reader["STATE_NAME"] == DBNull.Value
+                        ? ""
+                        : reader["STATE_NAME"].ToString(),
 
-                    if (!string.IsNullOrWhiteSpace(stationName))
-                    {
-                        stations.Add(stationName);
-                    }
-                }
+                    Owners = reader["OWNERS"] == DBNull.Value
+                        ? ""
+                        : reader["OWNERS"].ToString(),
+
+                    StationName = reader["STATION_NAME"] == DBNull.Value
+                        ? ""
+                        : reader["STATION_NAME"].ToString(),
+
+                    Classification = reader["CLASSIFICATION"] == DBNull.Value
+                        ? ""
+                        : reader["CLASSIFICATION"].ToString()
+                });
             }
 
             return stations
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(x => !string.IsNullOrWhiteSpace(x.StationName))
+                .GroupBy(x => NormalizeStationName(x.StationName))
+                .Select(g => g.First())
                 .ToList();
         }
     }

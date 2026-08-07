@@ -1,5 +1,6 @@
 ﻿@page
 @model CoalShortagePortal.WebApp.Pages.GenMUs.AllPendingMUsModel
+@using CoalShortagePortal.Core
 @{
     ViewData["Title"] = "Pending MUs";
     var pendingCount = Model.PendingGenerators?.Count(p => !p.HasSubmitted) ?? 0;
@@ -107,9 +108,9 @@
                                         <th style="width:13%;">
                                             <i class="fas fa-building"></i> STATION
                                         </th>
-                                        <th style="width:13%;">
+                                        @* <th style="width:13%;">
                                             <i class="fas fa-envelope"></i> EMAIL
-                                        </th>
+                                        </th> *@
                                         <th style="width:8%;" class="text-center">
                                             <i class="fas fa-check"></i> STATUS
                                         </th>
@@ -186,11 +187,11 @@
                                                     }
                                                 </td>
 
-                                                <td class="align-middle">
+                                                @* <td class="align-middle">
                                                     <small style="color:#0E3747;">
                                                         @generator.Email
                                                     </small>
-                                                </td>
+                                                </td> *@
 
                                                 <td class="align-middle text-center">
                                                     @if (generator.HasSubmitted)
@@ -523,21 +524,24 @@
             </div>
 
             <!-- Export Button for ExBus & GenMu -->
-            <div class="d-flex flex-column align-items-end mt-3 mb-5">
-                <button type="button"
-                        class="btn btn-export-active btn-lg"
-                        onclick="downloadBothExcelFiles()">
-                    <i class="fas fa-file-excel mr-2"></i>
-                    Export Yesterday's Data to Excel
-                </button>
+            @if (User.IsInRole(SecurityConstants.AdminRoleString))
+            {
+                <div class="d-flex flex-column align-items-end mt-3 mb-5">
+                    <button type="button"
+                            class="btn btn-export-active btn-lg"
+                            onclick="downloadBothExcelFiles()">
+                        <i class="fas fa-file-excel mr-2"></i>
+                        Export Yesterday's Data to Excel
+                    </button>
 
-                <small class="text-success mt-2">
-                    <i class="fas fa-check-circle mr-1"></i>
-                    This will download ExBus and GenMU files separately.
-                </small>
-            </div>
-
-
+                    <small class="text-success mt-2">
+                        <i class="fas fa-check-circle mr-1"></i>
+                        This will download ExBus and GenMU files separately.
+                    </small>
+                </div>
+                
+            }
+            
         </div>
     </div>
 </div>
