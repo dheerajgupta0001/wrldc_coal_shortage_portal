@@ -13,6 +13,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using CoalShortagePortal.Infrastructure.Services.Email;
+using CoalShortagePortal.WebApp.Services.GenMUs.Interfaces;
+using CoalShortagePortal.WebApp.Services.GenMUs.Implementations;
 
 namespace CoalShortagePortal.WebApp
 {
@@ -84,6 +86,19 @@ namespace CoalShortagePortal.WebApp
             });
 
             services.AddInfrastructure(Configuration, Environment);
+
+            // GenMUs Services
+            services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+            services.AddScoped<IReportingOracleService, ReportingOracleService>();
+
+            services.AddScoped<IExcelCellExportService, ExcelCellExportService>();
+
+            services.AddScoped<IAllPendingMUsService, AllPendingMUsService>();
+
+            // Register Email and OTP services
+            services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IOtpService, OtpService>();
 
             // Register Email and OTP services
             services.AddScoped<IEmailService, EmailService>();
