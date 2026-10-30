@@ -70,6 +70,7 @@ namespace CoalShortagePortal.Application.Security
         /**
          * This method seeds roles
          * **/
+        //public void SeedUserRoles(RoleManager<IdentityRole> roleManager)
         public void SeedUserRoles(RoleManager<IdentityRole> roleManager)
         {
             // check if role doesn't exist

@@ -1,0 +1,57 @@
+@model IReadOnlyList<CoalShortagePortal.WebApp.Models.UnitAuxiliaryConsumptionListItemVM>
+@{
+    ViewData["Title"] = "Unit Installed Capacity and Auxiliary Consumption";
+}
+
+<div class="container-fluid mt-4">
+    <h2>@ViewData["Title"]</h2>
+    <p class="text-muted">
+        All previous entries are retained. The row marked <strong>Latest</strong> is used for partial-outage calculations.
+    </p>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Station Name</th>
+                    <th>Unit No</th>
+                    <th>Capacity (MW)</th>
+                    <th>Auxiliary Consumption (%)</th>
+                    <th>Normative DC (MW)</th>
+                    <th>Updated On</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="7" class="text-center">No unit data is available.</td></tr>
+                }
+                else
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr class="@(item.IsLatest ? "table-success" : string.Empty)">
+                            <td>@item.StationName</td>
+                            <td>@item.UnitNumber</td>
+                            <td>@item.InstalledCapacityMw.ToString("0.###")</td>
+                            <td>@item.AuxiliaryConsumptionPercent.ToString("0.##")%</td>
+                            <td>@item.NormativeCapacityMw.ToString("0.###")</td>
+                            <td>@item.UpdatedOn.ToLocalTime().ToString("dd-MMM-yyyy HH:mm")</td>
+                            <td>
+                                @if (item.IsLatest)
+                                {
+                                    <span class="badge bg-success">Latest</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">History</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

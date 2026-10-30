@@ -76,6 +76,17 @@
                             <span asp-validation-for="UserType"
                                   class="text-danger"></span>
                         </div>
+
+                        <div class="form-group" id="generatingStationIdContainer">
+                            <label asp-for="GeneratingStationId"></label>
+                            <select asp-for="GeneratingStationId"
+                                    asp-items="Model.GeneratingStations"
+                                    class="form-control">
+                                <option value="">-- Select Generating Station --</option>
+                            </select>
+                            <span asp-validation-for="GeneratingStationId"
+                                  class="text-danger"></span>
+                        </div>
                         
                         <div class="form-group" id="stateField" style="display:none;">
                             <label asp-for="State"></label>
@@ -164,8 +175,15 @@
 
                 // Show State field
                 $('#stateField').show();
+
+                // Hide generating stations options
+                $('#generatingStationIdContainer').hide()
+
             }
             else {
+
+                // Show generating stations options
+                $('#generatingStationIdContainer').show()
 
                 // Show User Type dropdown
                 $('#userTypeContainer').show();

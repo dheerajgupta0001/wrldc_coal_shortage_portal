@@ -6,20 +6,26 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
-    <PackageReference Include="DNTCaptcha.Core" Version="5.3.2" />
-    <PackageReference Include="EPPlus" Version="8.5.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.9" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.7" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.3.0" />
-    <PackageReference Include="Microsoft.Graph" Version="6.2.0" />
-	<PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.26.200" />
+    <PackageReference Include="DNTCaptcha.Core" Version="5.3.4" />
+    <PackageReference Include="EPPlus" Version="8.7.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.13" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.9.0" />
+    <PackageReference Include="Microsoft.Graph" Version="6.8.0" />
+	<PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.26.301" />
+	<PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.13" />
 
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CoalShortagePortal.Core\CoalShortagePortal.Core.csproj" />
     <ProjectReference Include="..\CoalShortagePortal.Data\CoalShortagePortal.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Services\Excel\" />
+    <Folder Include="Services\Oracle\" />
   </ItemGroup>
 
 </Project>

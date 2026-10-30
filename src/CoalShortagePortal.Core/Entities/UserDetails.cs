@@ -26,6 +26,9 @@ namespace CoalShortagePortal.Core.Entities
         [MaxLength(100)]
         public string State { get; set; } // Only for State_Gen
 
+        // ID of the generating station from Oracle database, if applicable
+        public int? GeneratingStationId { get; set; }
+
         // Navigation property to AspNetUsers
         [ForeignKey("UserId")]
         public virtual IdentityUser User { get; set; }

@@ -1,4 +1,4 @@
-﻿namespace CoalShortagePortal.WebApp.Models.GenMUs
+﻿namespace CoalShortagePortal.Application.Features.GenMUs.Models
 {
     public class CurrentUserInfo
     {

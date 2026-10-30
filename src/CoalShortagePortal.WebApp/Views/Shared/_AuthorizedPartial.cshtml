@@ -29,12 +29,23 @@
         </a>
     </li>
 
+    <li class="nav-item">
+        <a class="nav-link" asp-area="" asp-controller="UnitData" asp-action="Index">
+            <i class="fas fa-industry nav-icon"></i>Unit Data
+        </a>
+    </li>
+
     if (User.IsInRole(SecurityConstants.AdminRoleString))
     {
         <!-- ===== ADMIN LINKS ===== -->
         <li class="nav-item">
             <a class="nav-link" asp-area="" asp-controller="UserManage" asp-action="Index">
                 <i class="fas fa-users-cog nav-icon"></i>Users
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" asp-area="" asp-controller="UnitAuxiliaryConsumption" asp-action="Index">
+                <i class="fas fa-sliders-h nav-icon"></i>Unit Auxiliary Data
             </a>
         </li>
         @* <li class="nav-item">

@@ -13,8 +13,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using CoalShortagePortal.Infrastructure.Services.Email;
-using CoalShortagePortal.WebApp.Services.GenMUs.Interfaces;
 using CoalShortagePortal.WebApp.Services.GenMUs.Implementations;
+using CoalShortagePortal.Application.Features.GenMUs.Interfaces;
+using CoalShortagePortal.Application.Features.GenMUs.Services;
 
 namespace CoalShortagePortal.WebApp
 {

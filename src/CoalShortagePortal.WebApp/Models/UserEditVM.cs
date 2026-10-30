@@ -34,10 +34,16 @@ namespace CoalShortagePortal.WebApp.Models
         [Display(Name = "Is SLDC")]
         public bool IsSldc { get; set; }
 
+        [Display(Name = "Generating Station")]
+        public int? GeneratingStationId { get; set; }
+
         [Display(Name = "State")]
         public string State { get; set; }
         // NEW
         public List<SelectListItem> States { get; set; }
+            = new List<SelectListItem>();
+
+        public List<SelectListItem> GeneratingStations { get; set; }
             = new List<SelectListItem>();
     }
 }

@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using CoalShortagePortal.Application.Features.GenMUs.Helpers;
+using CoalShortagePortal.Application.Features.GenMUs.Interfaces;
+using CoalShortagePortal.Application.Features.GenMUs.Models;
 using CoalShortagePortal.Core.Entities;
-using CoalShortagePortal.WebApp.Models.GenMUs;
-using CoalShortagePortal.WebApp.Services.GenMUs.Helpers;
-using CoalShortagePortal.WebApp.Services.GenMUs.Interfaces;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 

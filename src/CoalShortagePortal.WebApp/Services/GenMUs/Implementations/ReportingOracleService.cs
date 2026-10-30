@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using CoalShortagePortal.WebApp.Models.GenMUs;
-using CoalShortagePortal.WebApp.Services.GenMUs.Helpers;
-using CoalShortagePortal.WebApp.Services.GenMUs.Interfaces;
+using CoalShortagePortal.Application.Features.GenMUs.Helpers;
+using CoalShortagePortal.Application.Features.GenMUs.Interfaces;
+using CoalShortagePortal.Application.Features.GenMUs.Models;
 using Microsoft.Extensions.Configuration;
 using Oracle.ManagedDataAccess.Client;
 
@@ -17,6 +17,43 @@ namespace CoalShortagePortal.WebApp.Services.GenMUs.Implementations
         public ReportingOracleService(IConfiguration configuration)
         {
             _configuration = configuration;
+        }
+
+        public async Task<List<GeneratingStationOptionModel>>
+            GetGeneratingStationsAsync()
+        {
+            var result = new List<GeneratingStationOptionModel>();
+
+            var connectionString =
+                _configuration.GetConnectionString("ReportingConnection");
+
+            const string query = @"
+                SELECT
+                    gs.ID,
+                    gs.GENERATING_STATION_NAME
+                FROM REPORTING_WEB_UI_UAT.GENERATING_STATION gs
+                WHERE gs.GENERATING_STATION_NAME IS NOT NULL
+                ORDER BY gs.GENERATING_STATION_NAME";
+
+            using (var connection = new OracleConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                using (var command = new OracleCommand(query, connection))
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        result.Add(new GeneratingStationOptionModel
+                        {
+                            Id = Convert.ToInt32(reader["ID"]),
+                            Name = reader["GENERATING_STATION_NAME"].ToString()
+                        });
+                    }
+                }
+            }
+
+            return result;
         }
 
         public async Task<List<ScadaCellMappingModel>>

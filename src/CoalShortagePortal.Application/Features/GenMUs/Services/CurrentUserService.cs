@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using CoalShortagePortal.Application.Features.GenMUs.Interfaces;
+using CoalShortagePortal.Application.Features.GenMUs.Models;
 using CoalShortagePortal.Data;
-using CoalShortagePortal.WebApp.Models.GenMUs;
-using CoalShortagePortal.WebApp.Services.GenMUs.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace CoalShortagePortal.WebApp.Services.GenMUs.Implementations
+namespace CoalShortagePortal.Application.Features.GenMUs.Services
 {
     public class CurrentUserService : ICurrentUserService
     {

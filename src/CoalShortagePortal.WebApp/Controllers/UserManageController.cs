@@ -1,6 +1,8 @@
 ﻿using CoalShortagePortal.Core;
 using CoalShortagePortal.Core.Entities;
 using CoalShortagePortal.Data;
+using CoalShortagePortal.Application.Features.GenMUs.Interfaces;
+using CoalShortagePortal.Application.Features.GenMUs.Models;
 using CoalShortagePortal.WebApp.Extensions;
 using CoalShortagePortal.WebApp.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -22,12 +24,18 @@ namespace CoalShortagePortal.WebApp.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger _logger;
         private readonly ApplicationDbContext _context;
+        private readonly IReportingOracleService _reportingOracleService;
 
-        public UserManageController(UserManager<IdentityUser> userManager, ILogger<UserManageController> logger, ApplicationDbContext context)
+        public UserManageController(
+            UserManager<IdentityUser> userManager,
+            ILogger<UserManageController> logger,
+            ApplicationDbContext context,
+            IReportingOracleService reportingOracleService)
         {
             _userManager = userManager;
             _logger = logger;
             _context = context;
+            _reportingOracleService = reportingOracleService;
         }
 
         public async Task<IActionResult> Index()
@@ -65,14 +73,7 @@ namespace CoalShortagePortal.WebApp.Controllers
         {
             var vm = new UserCreateVM();
 
-            vm.States = await _context.WrStates
-                .OrderBy(x => x.StateName)
-                .Select(x => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
-                {
-                    Value = x.StateName,
-                    Text = x.StateName
-                })
-                .ToListAsync();
+            await PopulateCreateListsAsync(vm);
 
             return View(vm);
         }
@@ -87,14 +88,20 @@ namespace CoalShortagePortal.WebApp.Controllers
                 if (vm.UserType == "State_Gen" && string.IsNullOrWhiteSpace(vm.State))
                 {
                     ModelState.AddModelError("State", "State is required for State_Gen user type.");
-                    vm.States = await _context.WrStates
-                        .OrderBy(x => x.StateName)
-                        .Select(x => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
-                        {
-                            Value = x.StateName,
-                            Text = x.StateName
-                        })
-                        .ToListAsync();
+                }
+
+                var generatingStations = await _reportingOracleService.GetGeneratingStationsAsync();
+                if (vm.GeneratingStationId.HasValue
+                    && !generatingStations.Any(x => x.Id == vm.GeneratingStationId.Value))
+                {
+                    ModelState.AddModelError(
+                        nameof(vm.GeneratingStationId),
+                        "Select a valid generating station.");
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    await PopulateCreateListsAsync(vm, generatingStations);
                     return View(vm);
                 }
 
@@ -144,6 +151,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                             DisplayName = vm.DisplayName,
                             State = vm.UserType == "State_Gen" ? vm.State : null,
                             IsSldc = vm.IsSldc,
+                            GeneratingStationId = vm.GeneratingStationId,
                             CreatedById = currentUserId,
                             Created = currentTime,
                             LastModifiedById = currentUserId,
@@ -192,15 +200,32 @@ namespace CoalShortagePortal.WebApp.Controllers
                 AddErrors(result);
             }
 
+            await PopulateCreateListsAsync(vm);
+            return View(vm);
+        }
+
+        private async Task PopulateCreateListsAsync(
+            UserCreateVM vm,
+            IReadOnlyCollection<GeneratingStationOptionModel> generatingStations = null)
+        {
             vm.States = await _context.WrStates
                 .OrderBy(x => x.StateName)
-                .Select(x => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                .Select(x => new SelectListItem
                 {
                     Value = x.StateName,
                     Text = x.StateName
                 })
                 .ToListAsync();
-            return View(vm);
+
+            generatingStations ??= await _reportingOracleService.GetGeneratingStationsAsync();
+            vm.GeneratingStations = generatingStations
+                .Select(x => new SelectListItem
+                {
+                    Value = x.Id.ToString(),
+                    Text = x.Name,
+                    Selected = x.Id == vm.GeneratingStationId
+                })
+                .ToList();
         }
 
         [HttpGet]
@@ -228,7 +253,8 @@ namespace CoalShortagePortal.WebApp.Controllers
                 UserType = userDetails?.UserType,
                 DisplayName = userDetails?.DisplayName,
                 State = userDetails?.State,
-                IsSldc = userDetails?.IsSldc ?? false
+                IsSldc = userDetails?.IsSldc ?? false,
+                GeneratingStationId = userDetails?.GeneratingStationId
             };
 
             vm.States = await _context.WrStates
@@ -239,6 +265,8 @@ namespace CoalShortagePortal.WebApp.Controllers
                     Text = x.StateName
                 })
                 .ToListAsync();
+
+            await PopulateEditListsAsync(vm);
 
             return View(vm);
 
@@ -255,6 +283,27 @@ namespace CoalShortagePortal.WebApp.Controllers
                     return NotFound();
                 }
 
+                if (vm.IsSldc)
+                {
+                    vm.GeneratingStationId = null;
+                }
+                else if (vm.GeneratingStationId.HasValue)
+                {
+                    var generatingStations = await _reportingOracleService.GetGeneratingStationsAsync();
+                    if (!generatingStations.Any(x => x.Id == vm.GeneratingStationId.Value))
+                    {
+                        ModelState.AddModelError(
+                            nameof(vm.GeneratingStationId),
+                            "Select a valid generating station.");
+                    }
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    await PopulateEditListsAsync(vm);
+                    return View(vm);
+                }
+
                 // Validate State is required for State_Gen
                 if (vm.UserType == "State_Gen" && string.IsNullOrWhiteSpace(vm.State))
                 {
@@ -267,6 +316,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                             Text = x.StateName
                         })
                         .ToListAsync();
+                    await PopulateEditListsAsync(vm);
                     return View(vm);
                 }
 
@@ -373,6 +423,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                         userDetails.DisplayName = vm.DisplayName;
                         userDetails.State = vm.UserType == "State_Gen" ? vm.State : null;
                         userDetails.IsSldc = vm.IsSldc;
+                        userDetails.GeneratingStationId = vm.GeneratingStationId;
                         userDetails.LastModifiedById = currentUserId;
                         userDetails.LastModified = DateTime.UtcNow;
                     }
@@ -386,6 +437,7 @@ namespace CoalShortagePortal.WebApp.Controllers
                             DisplayName = vm.DisplayName,
                             State = vm.UserType == "State_Gen" ? vm.State : null,
                             IsSldc = vm.IsSldc,
+                            GeneratingStationId = vm.GeneratingStationId,
                             CreatedById = currentUserId,
                             Created = DateTime.UtcNow,
                             LastModifiedById = currentUserId,
@@ -420,7 +472,21 @@ namespace CoalShortagePortal.WebApp.Controllers
                     Text = x.StateName
                 })
                 .ToListAsync();
+            await PopulateEditListsAsync(vm);
             return View(vm);
+        }
+
+        private async Task PopulateEditListsAsync(UserEditVM vm)
+        {
+            var generatingStations = await _reportingOracleService.GetGeneratingStationsAsync();
+            vm.GeneratingStations = generatingStations
+                .Select(x => new SelectListItem
+                {
+                    Value = x.Id.ToString(),
+                    Text = x.Name,
+                    Selected = x.Id == vm.GeneratingStationId
+                })
+                .ToList();
         }
 
         [HttpGet]

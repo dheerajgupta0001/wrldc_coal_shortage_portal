@@ -59,31 +59,32 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
-    <PackageReference Include="DNTCaptcha.Core" Version="5.3.2" />
-    <PackageReference Include="EPPlus" Version="8.5.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.7" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.7" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.7">
+    <PackageReference Include="DNTCaptcha.Core" Version="5.3.4" />
+    <PackageReference Include="EPPlus" Version="8.7.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.13">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Graph" Version="6.2.0" />
+    <PackageReference Include="Microsoft.Graph" Version="6.8.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="NuGet.Protocol" Version="7.9.0" />
 
 	  <!-- Force ALL Roslyn/CodeAnalysis family packages to the SAME version -->
-	  <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.3.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.3.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.3.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" Version="5.3.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.Features" Version="5.3.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.Scripting.Common" Version="5.3.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.3.0" />
-	  <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.26.200" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.9.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.9.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.9.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" Version="5.9.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.Features" Version="5.9.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.Scripting.Common" Version="5.9.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.9.0" />
+	  <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.26.301" />
 
   </ItemGroup>
 
@@ -97,6 +98,8 @@
 
   <ItemGroup>
     <Folder Include="Pages\GenStn\" />
+    <Folder Include="Services\GenMUs\Helpers\" />
+    <Folder Include="Services\GenMUs\Interfaces\" />
   </ItemGroup>
 
 </Project>

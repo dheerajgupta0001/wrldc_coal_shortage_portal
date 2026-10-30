@@ -1,0 +1,46 @@
+@model CoalShortagePortal.WebApp.Models.UnitAuxiliaryConsumptionCreateVM
+@{
+    ViewData["Title"] = "Add Unit Auxiliary Consumption";
+}
+
+<div class="container mt-4">
+    <h2>@ViewData["Title"]</h2>
+    <p class="text-muted">Adding a new value creates a dated history entry. Existing entries are not overwritten.</p>
+
+    <form asp-action="Create" method="post" class="col-md-6">
+        <div asp-validation-summary="All" class="text-danger"></div>
+
+        <div class="form-group mb-3">
+            <label asp-for="GeneratingStationId"></label>
+            <select asp-for="GeneratingStationId" asp-items="Model.GeneratingStations" class="form-control">
+                <option value="">-- Select Generating Station --</option>
+            </select>
+            <span asp-validation-for="GeneratingStationId" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="UnitNumber"></label>
+            <input asp-for="UnitNumber" class="form-control" />
+            <span asp-validation-for="UnitNumber" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="InstalledCapacityMw"></label>
+            <input asp-for="InstalledCapacityMw" class="form-control" step="0.001" />
+            <span asp-validation-for="InstalledCapacityMw" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="AuxiliaryConsumptionPercent"></label>
+            <input asp-for="AuxiliaryConsumptionPercent" class="form-control" step="0.01" />
+            <span asp-validation-for="AuxiliaryConsumptionPercent" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-success">Save</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

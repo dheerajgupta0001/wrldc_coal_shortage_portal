@@ -30,6 +30,7 @@ namespace CoalShortagePortal.Data
         public DbSet<UserDetails> UserDetails { get; set; }
         public DbSet<WrStates> WrStates { get; set; }
         public DbSet<UserOtp> UserOtps { get; set; }
+        public DbSet<UnitAuxiliaryConsumption> UnitAuxiliaryConsumptions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

@@ -1,8 +1,8 @@
-﻿using CoalShortagePortal.WebApp.Models.GenMUs;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Threading.Tasks;
+using CoalShortagePortal.Application.Features.GenMUs.Models;
 
-namespace CoalShortagePortal.WebApp.Services.GenMUs.Interfaces
+namespace CoalShortagePortal.Application.Features.GenMUs.Interfaces
 {
     public interface ICurrentUserService
     {

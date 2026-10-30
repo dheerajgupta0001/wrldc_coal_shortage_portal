@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace CoalShortagePortal.WebApp.Models.GenMUs
+namespace CoalShortagePortal.Application.Features.GenMUs.Models
 {
     public class MUEntryModel
     {

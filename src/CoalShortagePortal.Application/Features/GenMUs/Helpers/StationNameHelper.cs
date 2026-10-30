@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace CoalShortagePortal.WebApp.Services.GenMUs.Helpers
+namespace CoalShortagePortal.Application.Features.GenMUs.Helpers
 {
     public class StationNameHelper
     {

@@ -17,7 +17,7 @@ namespace CoalShortagePortal.WebApp.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.7")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -539,6 +539,51 @@ namespace CoalShortagePortal.WebApp.Migrations
                     b.ToTable("OtherReasonsResponses");
                 });
 
+            modelBuilder.Entity("CoalShortagePortal.Core.Entities.UnitAuxiliaryConsumption", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AuxiliaryConsumptionPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedById")
+                        .HasColumnType("text");
+
+                    b.Property<int>("GeneratingStationId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("InstalledCapacityMw")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)");
+
+                    b.Property<DateTime?>("LastModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedById")
+                        .HasColumnType("text");
+
+                    b.Property<int>("UnitNumber")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("LastModifiedById");
+
+                    b.HasIndex("GeneratingStationId", "UnitNumber", "Created");
+
+                    b.ToTable("UnitAuxiliaryConsumptions");
+                });
+
             modelBuilder.Entity("CoalShortagePortal.Core.Entities.UserDetails", b =>
                 {
                     b.Property<int>("Id")
@@ -557,6 +602,12 @@ namespace CoalShortagePortal.WebApp.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<int?>("GeneratingStationId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsSldc")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("LastModified")
                         .HasColumnType("timestamp with time zone");
@@ -960,6 +1011,21 @@ namespace CoalShortagePortal.WebApp.Migrations
                 });
 
             modelBuilder.Entity("CoalShortagePortal.Core.Entities.OtherReasonsResponse", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById");
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "LastModifiedBy")
+                        .WithMany()
+                        .HasForeignKey("LastModifiedById");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("LastModifiedBy");
+                });
+
+            modelBuilder.Entity("CoalShortagePortal.Core.Entities.UnitAuxiliaryConsumption", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "CreatedBy")
                         .WithMany()

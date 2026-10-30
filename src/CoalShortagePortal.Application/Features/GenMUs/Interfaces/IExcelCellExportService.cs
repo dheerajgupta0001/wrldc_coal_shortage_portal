@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Drawing;
 using CoalShortagePortal.Core.Entities;
-using CoalShortagePortal.WebApp.Models.GenMUs;
+using CoalShortagePortal.Application.Features.GenMUs.Models;
 
-namespace CoalShortagePortal.WebApp.Services.GenMUs.Interfaces
+namespace CoalShortagePortal.Application.Features.GenMUs.Interfaces
 {
     public interface IExcelCellExportService
     {

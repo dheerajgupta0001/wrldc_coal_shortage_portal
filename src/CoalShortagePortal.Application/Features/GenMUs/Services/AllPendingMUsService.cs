@@ -2,16 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CoalShortagePortal.Application.Features.GenMUs.Interfaces;
+using CoalShortagePortal.Application.Features.GenMUs.Models;
 using CoalShortagePortal.Core.Entities;
-using CoalShortagePortal.Data;
-using CoalShortagePortal.WebApp.Models.GenMUs;
-using CoalShortagePortal.WebApp.Services.GenMUs.Helpers;
-using CoalShortagePortal.WebApp.Services.GenMUs.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using CoalShortagePortal.Data;
+using CoalShortagePortal.Application.Features.GenMUs.Helpers;
 
-namespace CoalShortagePortal.WebApp.Services.GenMUs.Implementations
+namespace CoalShortagePortal.Application.Features.GenMUs.Services
 {
     public class AllPendingMUsService : IAllPendingMUsService
     {

@@ -53,14 +53,26 @@
                                     class="form-control"
                                     id="userTypeSelect">
                                 <option value="">-- Select User Type --</option>
-                                <option value="ISGS">ISGS</option>
+                                <option value="ISGS">ISGS_IPP</option>
                                 <option value="RE">RE</option>
-                                <option value="IPP">IPP</option>
+                                @* <option value="IPP">IPP</option> *@
                                 <option value="State_Gen">State_Gen</option>
                                 <option value="Bulk_Consumer">Bulk Consumer</option>
                             </select>
 
                             <span asp-validation-for="UserType"
+                                  class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group" id="generatingStationField">
+                            <label asp-for="GeneratingStationId"></label>
+                            <select asp-for="GeneratingStationId"
+                                    asp-items="Model.GeneratingStations"
+                                    class="form-control"
+                                    id="GeneratingStationId">
+                                <option value="">-- Select Generating Station --</option>
+                            </select>
+                            <span asp-validation-for="GeneratingStationId"
                                   class="text-danger"></span>
                         </div>
                         
@@ -135,11 +147,16 @@
 
                 // Show State field
                 $('#stateField').show();
+
+                // SLDC users do not have a generating station
+                $('#generatingStationField').hide();
+                $('#GeneratingStationId').val('');
             }
             else {
 
                 // Show User Type dropdown
                 $('#userTypeContainer').show();
+                $('#generatingStationField').show();
 
                 // Show state only for State_Gen
                 if ($('#userTypeSelect').val() === 'State_Gen') {
